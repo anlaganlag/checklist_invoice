@@ -1,4 +1,9 @@
 import pandas as pd
+import warnings
+
+# Filter out the warning about print area
+warnings.filterwarnings('ignore', message='Print area cannot be set to Defined name')
+
 
 def create_checking_list():
     try:
@@ -8,9 +13,14 @@ def create_checking_list():
         
         # Initialize an empty DataFrame for the final result
         final_df = pd.DataFrame()
-        
+                    # Add sheet name as the first row only if we have data
+        current_sheet_cnt  = 0
+            # the total sheet count
+        sheet_cnt = len(excel_file.sheet_names) - 1
         # Process each sheet starting from the second one
         for sheet_name in sheet_names:
+
+            current_sheet_cnt += 1
             # Read the sheet, skipping the first 12 rows
             df = pd.read_excel('import_invoice.xlsx', sheet_name=sheet_name, skiprows=12)
             
@@ -43,11 +53,11 @@ def create_checking_list():
             # Convert processed rows back to DataFrame
             df = pd.DataFrame(processed_rows, columns=df.columns)
             
-            # Add sheet name as the first row only if we have data
+
             if not df.empty:
                 # Create a row with empty values except for the first column which contains the sheet name
                 sheet_row_data = [""] * len(df.columns)
-                sheet_row_data[0] = sheet_name
+                sheet_row_data[0] = f'{sheet_name} " Invoice"  {current_sheet_cnt}/{sheet_cnt}'
                 sheet_row = pd.DataFrame([sheet_row_data], columns=df.columns)
                 df = pd.concat([sheet_row, df], ignore_index=True)
             
@@ -77,7 +87,30 @@ def create_checking_list():
         new_df = final_df
         
         # Save to new Excel file
-        new_df.to_excel('checking_list.xlsx', index=False)
+        try:
+            new_df.to_excel('checking_list.xlsx', index=False)
+        except PermissionError:
+            import win32com.client
+            import os
+            # Try to close Excel file if it's open
+            excel = win32com.client.Dispatch("Excel.Application")
+            try:
+                for wb in excel.Workbooks:
+                    try:
+                        if hasattr(wb, 'FullName') and os.path.abspath(wb.FullName) == os.path.abspath('checking_list.xlsx'):
+                            wb.Close(SaveChanges=False)
+                    except Exception as wb_error:
+                        print(f"Warning: Could not close workbook: {str(wb_error)}")
+                excel.Quit()
+            except Exception as excel_error:
+                print(f"Warning: Error when closing Excel: {str(excel_error)}")
+                # Try to force quit Excel if possible
+                try:
+                    excel.Quit()
+                except:
+                    pass
+            # Try to save again
+            new_df.to_excel('checking_list.xlsx', index=False)
         print("\nSuccessfully created checking_list.xlsx")
         return True
         
