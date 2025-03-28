@@ -33,9 +33,12 @@ def main():
 
     # 获取当前分支名
     try:
-        branch = subprocess.check_output(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], text=True).strip()
-    except subprocess.CalledProcessError:
-        print("无法获取当前分支名！")
+        if sys.platform == 'win32':
+            branch = subprocess.check_output('git rev-parse --abbrev-ref HEAD', text=True, shell=True).strip()
+        else:
+            branch = subprocess.check_output(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], text=True).strip()
+    except subprocess.CalledProcessError as e:
+        print(f"无法获取当前分支名！错误信息: {e.stderr if hasattr(e, 'stderr') else ''}")
         return
 
     # 执行git add .
