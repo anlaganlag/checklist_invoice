@@ -45,7 +45,10 @@ def create_checking_list():
             
             # Add sheet name as the first row only if we have data
             if not df.empty:
-                sheet_row = pd.DataFrame([[sheet_name] * len(df.columns)], columns=df.columns)
+                # Create a row with empty values except for the first column which contains the sheet name
+                sheet_row_data = [""] * len(df.columns)
+                sheet_row_data[0] = sheet_name
+                sheet_row = pd.DataFrame([sheet_row_data], columns=df.columns)
                 df = pd.concat([sheet_row, df], ignore_index=True)
             
             # Print actual columns to help identify them
