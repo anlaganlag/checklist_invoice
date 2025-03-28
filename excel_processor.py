@@ -57,7 +57,7 @@ def create_checking_list():
             if not df.empty:
                 # Create a row with empty values except for the first column which contains the sheet name
                 sheet_row_data = [""] * len(df.columns)
-                sheet_row_data[0] = f'{sheet_name} " Invoice"  {current_sheet_cnt}/{sheet_cnt}'
+                sheet_row_data[0] = f'{sheet_name} Invoice {current_sheet_cnt}/{sheet_cnt}'
                 sheet_row = pd.DataFrame([sheet_row_data], columns=df.columns)
                 df = pd.concat([sheet_row, df], ignore_index=True)
             
@@ -85,13 +85,15 @@ def create_checking_list():
             
         # Rename final_df to new_df to maintain compatibility with existing code
         new_df = final_df
-        
+        import os
+
         # Save to new Excel file
         try:
             new_df.to_excel('checking_list.xlsx', index=False)
+            # Open the file after successful save
+            os.startfile('checking_list.xlsx')
         except PermissionError:
             import win32com.client
-            import os
             # Try to close Excel file if it's open
             excel = win32com.client.Dispatch("Excel.Application")
             try:
@@ -111,6 +113,7 @@ def create_checking_list():
                     pass
             # Try to save again
             new_df.to_excel('checking_list.xlsx', index=False)
+            os.startfile('checking_list.xlsx')
         print("\nSuccessfully created checking_list.xlsx")
         return True
         
