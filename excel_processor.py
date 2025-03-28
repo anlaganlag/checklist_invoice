@@ -6,8 +6,39 @@ import os
 warnings.filterwarnings('ignore', message='Print area cannot be set to Defined name')
 
 
+def get_duty_rates():
+    try:
+        # Read dutyRate.xlsx
+        df = pd.read_excel('dutyRate.xlsx')
+        
+        # Group by Item Name and aggregate other columns
+        grouped_df = df.groupby('Item Name').agg({
+            'HSN1': lambda x: ' '.join(str(i) for i in x if pd.notna(i)),  # Concatenate HSN1 with space
+            'Final BCD': 'min',
+            'Final SWS': 'min',
+            'Final IGST': 'min'
+        }).reset_index()
+        
+        # Convert DataFrame to dictionary
+        duty_dict = {}
+        for _, row in grouped_df.iterrows():
+            duty_dict[row['Item Name']] = {
+                'hsn': row['HSN1'],
+                'bcd': row['Final BCD'],
+                'sws': row['Final SWS'],
+                'igst': row['Final IGST']
+            }
+        
+        return duty_dict
+    except Exception as e:
+        print(f"Error reading dutyRate.xlsx: {str(e)}")
+        return {}
+
 def create_checking_list():
     try:
+        duty_rates = get_duty_rates()
+        print(duty_rates)
+
         # Get all sheet names
         excel_file = pd.ExcelFile('import_invoice.xlsx')
         sheet_names = excel_file.sheet_names[1:]  # Skip the first sheet
@@ -72,8 +103,8 @@ def create_checking_list():
                 'Item#': 0, 
                 'P/N': 2,  
                 'Desc': 3, 
-                'Qty': 5,    # Replace with actual index of "Quantity PCS" column
-                'Price': 6,    # Replace with actual index of "Description" column
+                'Qty': 6,    # Replace with actual index of "Quantity PCS" column
+                'Price': 7,    # Replace with actual index of "Description" column
   # Replace with actual index of "P/N" column
                 'Category': 1,  # Replace with actual index of "Model Number" column
  # Replace with actual index of "Unit Price USD" column
@@ -102,11 +133,27 @@ def create_checking_list():
             # Create ID in the first column
             sheet_df.loc[1:,'ID'] = sheet_name+ '_' + sheet_df['Item#'].astype(str)
             
+            # Add duty rate columns after all other columns are set
+            sheet_df['HSN'] = ''
+            sheet_df['Duty'] = ''
+            sheet_df['Welfare'] = ''
+            sheet_df['IGST'] = ''
+
+            # Fill duty rate information for rows with Item Name
+            for idx, row in sheet_df.iterrows():
+                if pd.notna(row['Item Name']) and row['Item Name'] in duty_rates:
+                    rates = duty_rates[row['Item Name']]
+                    sheet_df.at[idx, 'HSN'] = rates['hsn']
+                    sheet_df.at[idx, 'Duty'] = rates['bcd']
+                    sheet_df.at[idx, 'Welfare'] = rates['sws']
+                    sheet_df.at[idx, 'IGST'] = rates['igst']
+
             # Append to the final DataFrame
             final_df = pd.concat([final_df, sheet_df], ignore_index=True)
             
         # Rename final_df to new_df to maintain compatibility with existing code
         new_df = final_df
+        import os
 
         # Save to new Excel file
         try:
@@ -142,6 +189,7 @@ def create_checking_list():
             # Try to save again
             new_df.to_excel('checking_list.xlsx', index=False)
             os.startfile('checking_list.xlsx')
+        print("\nSuccessfully created checking_list.xlsx")
         return True
         
     except Exception as e:
