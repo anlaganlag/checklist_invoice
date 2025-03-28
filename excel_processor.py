@@ -70,14 +70,21 @@ def create_checking_list():
             column_indices = {
                 'Item#': 0,  # Replace with actual index of "Item Nos." column
                 'P/N': 2,    # Replace with actual index of "P/N" column
+                'Category': 1,  # Replace with actual index of "Model Number" column
                 'Desc': 3,   # Replace with actual index of "Description" column
-                'Qty': 5,    # Replace with actual index of "Quantity PCS" column
-                'Price': 6   # Replace with actual index of "Unit Price USD" column
+                'Qty': 6,    # Replace with actual index of "Quantity PCS" column
+                'Price': 7,   # Replace with actual index of "Unit Price USD" column
+                'Item Name':3,
             }
             
             # Create a new DataFrame with selected columns
             sheet_df = pd.DataFrame()
             for new_name, idx in column_indices.items():
+                if new_name == 'Item Name':
+
+                    # Concatenate 'Item#' and 'Desc' columns
+                    # 将描述字段按'-'分割，只取第一部分
+                    sheet_df[new_name] = df.iloc[:, idx].str.split('-').str[0]
                 sheet_df[new_name] = df.iloc[:, idx]
             
             # Append to the final DataFrame

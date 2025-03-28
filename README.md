@@ -60,9 +60,10 @@ python excel_processor.py
 |--------------------------------------|-------------------------------------|------------------|
 | Item#                                | 0                                   | Item Numbers     |
 | P/N                                  | 2                                   | Part Number      |
-| Desc                                 | 3                                   | Description      |
-| Qty                                  | 5                                   | Quantity in PCS  |
-| Price                                | 6                                   | Unit Price in USD|
+| Model No.                            | 3                                   | Model Number     |
+| Desc                                 | 4                                   | Description      |
+| Qty                                  | 6                                   | Quantity in PCS  |
+| Price                                | 7                                   | Unit Price in USD|
 
 ## Customization
 
