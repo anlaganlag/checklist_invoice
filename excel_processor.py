@@ -69,23 +69,24 @@ def create_checking_list():
             # IMPORTANT: Update these indices based on the printed columns
             column_indices = {
                 'Item#': 0,  # Replace with actual index of "Item Nos." column
-                'P/N': 2,    # Replace with actual index of "P/N" column
-                'Category': 1,  # Replace with actual index of "Model Number" column
-                'Desc': 3,   # Replace with actual index of "Description" column
+                'P/N': 2,  
+                'Desc': 3, 
                 'Qty': 6,    # Replace with actual index of "Quantity PCS" column
-                'Price': 7,   # Replace with actual index of "Unit Price USD" column
+                'Price': 7,    # Replace with actual index of "Description" column
+  # Replace with actual index of "P/N" column
+                'Category': 1,  # Replace with actual index of "Model Number" column
+ # Replace with actual index of "Unit Price USD" column
                 'Item Name':3,
             }
             
             # Create a new DataFrame with selected columns
             sheet_df = pd.DataFrame()
             for new_name, idx in column_indices.items():
+                # For Item Name column, split by '-' and take only the part before it
                 if new_name == 'Item Name':
-
-                    # Concatenate 'Item#' and 'Desc' columns
-                    # 将描述字段按'-'分割，只取第一部分
-                    sheet_df[new_name] = df.iloc[:, idx].str.split('-').str[0]
-                sheet_df[new_name] = df.iloc[:, idx]
+                    sheet_df[new_name] = df.iloc[:, idx].apply(lambda x: str(x).split('-')[0].strip() if pd.notna(x) and '-' in str(x) else x)
+                else:
+                    sheet_df[new_name] = df.iloc[:, idx]
             
             # Append to the final DataFrame
             final_df = pd.concat([final_df, sheet_df], ignore_index=True)
