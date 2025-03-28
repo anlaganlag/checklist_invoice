@@ -1,5 +1,6 @@
 import pandas as pd
 import warnings
+import os
 
 # Filter out the warning about print area
 warnings.filterwarnings('ignore', message='Print area cannot be set to Defined name')
@@ -69,11 +70,10 @@ def create_checking_list():
             # IMPORTANT: Update these indices based on the printed columns
             column_indices = {
                 'Item#': 0, 
-                 'id': 0,
                 'P/N': 2,  
                 'Desc': 3, 
-                'Qty': 6,    # Replace with actual index of "Quantity PCS" column
-                'Price': 7,    # Replace with actual index of "Description" column
+                'Qty': 5,    # Replace with actual index of "Quantity PCS" column
+                'Price': 6,    # Replace with actual index of "Description" column
   # Replace with actual index of "P/N" column
                 'Category': 1,  # Replace with actual index of "Model Number" column
  # Replace with actual index of "Unit Price USD" column
@@ -82,28 +82,44 @@ def create_checking_list():
             
             # Create a new DataFrame with selected columns
             sheet_df = pd.DataFrame()
+            
+            # Add Item# as the first column
+            sheet_df['Item#'] = df.iloc[:, column_indices['Item#']]
+            
+            # Then create the ID column as the second column
+            sheet_df['ID'] = ''  # Initialize empty ID column
+            
+            # Then add other columns except Item# (since it's already added)
             for new_name, idx in column_indices.items():
-                # For Item Name column, split by '-' and take only the part before it
-                if new_name == 'Item Name':
-                    sheet_df[new_name] = df.iloc[:, idx].apply(lambda x: str(x).split('-')[0].strip() if pd.notna(x) and '-' in str(x) else x)
-                # elif new_name == 'Item#':
+                if new_name != 'Item#':  # Skip Item# as it's already added
+                    # For Item Name column, split by '-' and take only the part before it
+                    if new_name == 'Item Name':
+                        sheet_df[new_name] = df.iloc[:, idx].apply(lambda x: str(x).split('-')[0].strip() if pd.notna(x) and '-' in str(x) else x)
+                    else:
+                        sheet_df[new_name] = df.iloc[:, idx]
 
-                else:
-
-                    sheet_df[new_name] = df.iloc[:, idx]
+            
+            # Create ID in the first column
+            sheet_df.loc[1:,'ID'] = sheet_name+ '_' + sheet_df['Item#'].astype(str)
             
             # Append to the final DataFrame
             final_df = pd.concat([final_df, sheet_df], ignore_index=True)
             
         # Rename final_df to new_df to maintain compatibility with existing code
         new_df = final_df
-        import os
 
         # Save to new Excel file
         try:
             new_df.to_excel('checking_list.xlsx', index=False)
-            # Open the file after successful save
-            os.startfile('checking_list.xlsx')
+            # Open Excel file and keep it open
+            import win32com.client
+            excel = win32com.client.Dispatch("Excel.Application")
+            excel.Visible = True
+            workbook = excel.Workbooks.Open(os.path.abspath('checking_list.xlsx'))
+            print("\nSuccessfully created checking_list.xlsx")
+            
+            # Don't quit Excel - let it stay open
+            # excel.Quit()
         except PermissionError:
             import win32com.client
             # Try to close Excel file if it's open
@@ -126,7 +142,6 @@ def create_checking_list():
             # Try to save again
             new_df.to_excel('checking_list.xlsx', index=False)
             os.startfile('checking_list.xlsx')
-        print("\nSuccessfully created checking_list.xlsx")
         return True
         
     except Exception as e:
