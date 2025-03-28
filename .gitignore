@@ -1,0 +1,30 @@
+# SSH Keys
+**/id_rsa
+**/id_rsa.pub
+**/id_dsa
+**/id_dsa.pub
+**/id_ecdsa
+**/id_ecdsa.pub
+**/id_ed25519
+**/id_ed25519.pub
+anlag
+anlag.pub
+
+# Other sensitive files
+*.pem
+*.key
+*.cert
+*.crt
+*.p12
+*.pfx
+*.keystore
+*.jks
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Excel temp files
+~$*.xlsx
+~$*.xls
