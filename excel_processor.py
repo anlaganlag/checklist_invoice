@@ -68,7 +68,8 @@ def create_checking_list():
             
             # IMPORTANT: Update these indices based on the printed columns
             column_indices = {
-                'Item#': 0,  # Replace with actual index of "Item Nos." column
+                'Item#': 0, 
+                 'id': 0,
                 'P/N': 2,  
                 'Desc': 3, 
                 'Qty': 6,    # Replace with actual index of "Quantity PCS" column
@@ -85,7 +86,10 @@ def create_checking_list():
                 # For Item Name column, split by '-' and take only the part before it
                 if new_name == 'Item Name':
                     sheet_df[new_name] = df.iloc[:, idx].apply(lambda x: str(x).split('-')[0].strip() if pd.notna(x) and '-' in str(x) else x)
+                # elif new_name == 'Item#':
+
                 else:
+
                     sheet_df[new_name] = df.iloc[:, idx]
             
             # Append to the final DataFrame
