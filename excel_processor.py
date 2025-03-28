@@ -41,20 +41,34 @@ def create_checking_list():
 
         # Get all sheet names
         excel_file = pd.ExcelFile('import_invoice.xlsx')
-        sheet_names = excel_file.sheet_names[1:]  # Skip the first sheet
+        # Print all available sheet names
+        print("Available sheets:", excel_file.sheet_names)
+        
+        # Store original sheet names for accessing sheets
+        original_sheet_names = excel_file.sheet_names[1:]  # Skip the first sheet
+        
+        # Process sheet names for display and ID creation (remove CI- prefix)
+        processed_sheet_names = [name.replace('CI-', '') if name.startswith('CI-') else name 
+                      for name in original_sheet_names]
+        
+        # Print processed sheet names
+        print("Processed sheet names:", processed_sheet_names)
         
         # Initialize an empty DataFrame for the final result
         final_df = pd.DataFrame()
-                    # Add sheet name as the first row only if we have data
-        current_sheet_cnt  = 0
-            # the total sheet count
-        sheet_cnt = len(excel_file.sheet_names) - 1
+        current_sheet_cnt = 0
+        sheet_cnt = len(original_sheet_names)
+        
         # Process each sheet starting from the second one
-        for sheet_name in sheet_names:
-
+        for i, original_sheet_name in enumerate(original_sheet_names):
+            print(f"Attempting to access sheet: {original_sheet_name}")
             current_sheet_cnt += 1
-            # Read the sheet, skipping the first 12 rows
-            df = pd.read_excel('import_invoice.xlsx', sheet_name=sheet_name, skiprows=12)
+            
+            # Use processed name for ID creation
+            processed_sheet_name = processed_sheet_names[i]
+            
+            # Read the sheet using original name, skipping the first 12 rows
+            df = pd.read_excel('import_invoice.xlsx', sheet_name=original_sheet_name, skiprows=12)
             
             # Process rows to handle empty rows after numbered data
             processed_rows = []
@@ -89,12 +103,12 @@ def create_checking_list():
             if not df.empty:
                 # Create a row with empty values except for the first column which contains the sheet name
                 sheet_row_data = [""] * len(df.columns)
-                sheet_row_data[0] = f'{sheet_name} Invoice {current_sheet_cnt}/{sheet_cnt}'
+                sheet_row_data[0] = f'{processed_sheet_name} Invoice {current_sheet_cnt}/{sheet_cnt}'
                 sheet_row = pd.DataFrame([sheet_row_data], columns=df.columns)
                 df = pd.concat([sheet_row, df], ignore_index=True)
             
             # Print actual columns to help identify them
-            print(f"\nColumns in sheet '{sheet_name}':")
+            print(f"\nColumns in sheet '{processed_sheet_name}':")
             for i, col in enumerate(df.columns):
                 print(f"{i}: '{col}'")
             
@@ -119,7 +133,7 @@ def create_checking_list():
             
             # Then create the ID column as the second column
             sheet_df['ID'] = ''  # Initialize empty ID column
-            
+
             # Then add other columns except Item# (since it's already added)
             for new_name, idx in column_indices.items():
                 if new_name != 'Item#':  # Skip Item# as it's already added
@@ -131,9 +145,10 @@ def create_checking_list():
 
             
             # Create ID in the first column
-            sheet_df.loc[1:,'ID'] = sheet_name+ '_' + sheet_df['Item#'].astype(str)
+            sheet_df.loc[1:,'ID'] = processed_sheet_name+ '_' + sheet_df['Item#'].astype(str)                        # Add duty rate columns after all other columns are set
             
             # Add duty rate columns after all other columns are set
+
             sheet_df['HSN'] = ''
             sheet_df['Duty'] = ''
             sheet_df['Welfare'] = ''
@@ -147,7 +162,20 @@ def create_checking_list():
                     sheet_df.at[idx, 'Duty'] = rates['bcd']
                     sheet_df.at[idx, 'Welfare'] = rates['sws']
                     sheet_df.at[idx, 'IGST'] = rates['igst']
+            
+            # Then add other columns except Item# (since it's already added)
+            for new_name, idx in column_indices.items():
+                if new_name != 'Item#':  # Skip Item# as it's already added
+                    # For Item Name column, split by '-' and take only the part before it
+                    if new_name == 'Item Name':
+                        sheet_df[new_name] = df.iloc[:, idx].apply(lambda x: str(x).split('-')[0].strip() if pd.notna(x) and '-' in str(x) else x)
+                    else:
+                        sheet_df[new_name] = df.iloc[:, idx]
 
+            
+            # Create ID in the first column
+            sheet_df.loc[1:,'ID'] = processed_sheet_name + '_' + sheet_df['Item#'].astype(str)
+            
             # Append to the final DataFrame
             final_df = pd.concat([final_df, sheet_df], ignore_index=True)
             

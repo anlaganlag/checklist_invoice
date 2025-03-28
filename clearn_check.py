@@ -20,8 +20,8 @@ def process_excel(file_path):
             current_invoice = invoice_no
             # 保存发票行
             result_rows.append({
-                'Original_Row': pn,
-                'id': None,
+                'Item#': pn,
+                'ID': None,
                 'P/N': None,
                 'Desc': None,
                 'Qty': None,
@@ -35,12 +35,13 @@ def process_excel(file_path):
         else:
             # 处理常规行
             if pd.notna(row['Item#']) and current_invoice:
-                item_id = f"{current_invoice}_{row['Item#']}"
+                # Convert Item# to integer before concatenating to remove the decimal
+                item_id = f"{current_invoice}_{int(row['Item#'])}"
                 item_name = str(row['Desc']).split('-')[0] if pd.notna(row['Desc']) else ''
                 
                 result_rows.append({
-                    'Original_Row': None,
-                    'id': item_id,
+                    'Item#': row['Item#'],
+                    'ID': item_id,
                     'P/N': row['P/N'],
                     'Desc': row['Desc'],
                     'Qty': row['Qty'],
@@ -54,9 +55,6 @@ def process_excel(file_path):
     
     # 创建结果DataFrame
     result_df = pd.DataFrame(result_rows)
-    
-    # 处理发票行的显示
-    result_df['Original_Row'] = result_df['Original_Row'].fillna('')
     
     return result_df
 
