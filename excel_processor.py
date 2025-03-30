@@ -146,7 +146,7 @@ def create_checking_list():
                     sheet_df[new_name] = df.iloc[:, idx].apply(lambda x: str(x).split('-')[0].strip() if pd.notna(x) and '-' in str(x) else x)
                 elif new_name == 'Desc':
                     # Clean the description text to only keep alphanumeric, dots, hyphens and parentheses
-                    sheet_df[new_name] = df.iloc[:, idx].apply(lambda x: ''.join(char.upper() for char in str(x) if char.isalnum() or char in '.()').replace('Φ', '').replace('Ω', '').replace('-', '') if pd.notna(x) else x)
+                    sheet_df[new_name] = df.iloc[:, idx].apply(lambda x: ''.join(char.upper() for char in str(x) if char.isalnum() or char in '.()').replace('Φ', '').replace('Ω', '').replace('-', '').replace('φ', '') if pd.notna(x) else x)
                 else:
                     sheet_df[new_name] = df.iloc[:, idx]
 
