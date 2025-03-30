@@ -10,7 +10,7 @@ def get_duty_rates():
     try:
         # Read dutyRate.xlsx
         df = pd.read_excel('dutyRate.xlsx')
-        
+        python
         # Group by Item_Name and aggregate other columns
         grouped_df = df.groupby('Item_Name').agg({
             'HSN1': lambda x: ' '.join(str(i) for i in x if pd.notna(i)),  # Concatenate HSN1 with space

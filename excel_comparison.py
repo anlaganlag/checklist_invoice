@@ -8,6 +8,19 @@ def compare_excels(file1, file2, output_file):
         df1 = pd.read_excel(file1)
         df2 = pd.read_excel(file2)
 
+        # Print detailed information about the columns
+        print("\nFile 1 columns:")
+        print(df1.columns.tolist())
+        print("\nFile 2 columns:")
+        print(df2.columns.tolist())
+        
+        # Check if 'ID' column exists
+        if 'ID' not in df1.columns or 'ID' not in df2.columns:
+            print("\nWarning: 'ID' column not found!")
+            print("Available columns in file 1:", df1.columns.tolist())
+            print("Available columns in file 2:", df2.columns.tolist())
+            return
+
         # 确保两个 DataFrame 的列名顺序一致
         df2 = df2[df1.columns]
 
@@ -15,9 +28,9 @@ def compare_excels(file1, file2, output_file):
         diff_data = []
 
         for index, row1 in df1.iterrows():
-            id1 = row1['id']
-            # 查找 df2 中对应 id 的行
-            matching_row = df2[df2['id'] == id1]
+            id1 = row1['ID']
+            # 查找 df2 中对应 ID 的行
+            matching_row = df2[df2['ID'] == id1]
             if not matching_row.empty:
                 row2 = matching_row.iloc[0]
                 diff_cols = []
@@ -25,7 +38,7 @@ def compare_excels(file1, file2, output_file):
                     if row1[col] != row2[col]:
                         diff_cols.append(col)
                 if diff_cols:
-                    diff_info = {'id': id1}
+                    diff_info = {'ID': id1}
                     for col in diff_cols:
                         diff_info[f'{col}_file1'] = row1[col]
                         diff_info[f'{col}_file2'] = row2[col]
