@@ -1,4 +1,5 @@
 import pandas as pd
+import os
 
 def process_excel(file_path):
     # 读取Excel文件
@@ -28,6 +29,7 @@ def process_excel(file_path):
                 'Price': None,
                 'Category': None,
                 'Item_Name': None,
+                'HSN': None,
                 'Duty': None,
                 'Welfare': None,
                 'IGST': None
@@ -48,9 +50,10 @@ def process_excel(file_path):
                     'Price': row['Price'],
                     'Category': row['Category'],
                     'Item_Name': item_name,
+                    'HSN': row['HSN'],
                     'Duty': row['Duty'],
                     'Welfare': row['Welfare'],
-                    'IGST': row['IGST']
+                    'IGST': row['IGST'],
                 })
     
     # 创建结果DataFrame
@@ -63,4 +66,18 @@ file_path = 'c.xlsx'
 result = process_excel(file_path)
 
 # 保存结果
-result.to_excel('clean_check.xlsx', index=False)
+try:
+    # Try to save normally first
+    result.to_excel('clean_check.xlsx', index=False)
+except PermissionError:
+    # If file exists and is locked/open, try to remove it first
+    try:
+        os.remove('clean_check.xlsx')
+    except:
+        pass
+    # Try saving again after removing
+    result.to_excel('clean_check.xlsx', index=False)
+except Exception as e:
+    print(f"Error saving file: {str(e)}")
+    # Try saving with a different filename
+    result.to_excel('clean_check_new.xlsx', index=False)

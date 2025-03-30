@@ -1,14 +1,18 @@
 {
-
     "version": "0.2.0",
     "configurations": [
-
         {
-            "name": "Python Debugger: Current File",
-            "type": "debugpy",
+            "name": "Python: Excel Comparison",
+            "type": "python",
             "request": "launch",
-            "program": "${file}",
-            "console": "integratedTerminal"
+            "program": "${workspaceFolder}/excel_comparison.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}",
+            "args": ["checking_list.xlsx", "clean_check.xlsx", "check_report.xlsx"],
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
         }
     ]
 }

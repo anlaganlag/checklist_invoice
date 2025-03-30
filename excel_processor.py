@@ -11,8 +11,8 @@ def get_duty_rates():
         # Read dutyRate.xlsx
         df = pd.read_excel('dutyRate.xlsx')
         
-        # Group by Item Name and aggregate other columns
-        grouped_df = df.groupby('Item Name').agg({
+        # Group by Item_Name and aggregate other columns
+        grouped_df = df.groupby('Item_Name').agg({
             'HSN1': lambda x: ' '.join(str(i) for i in x if pd.notna(i)),  # Concatenate HSN1 with space
             'Final BCD': 'min',
             'Final SWS': 'min',
@@ -22,7 +22,7 @@ def get_duty_rates():
         # Convert DataFrame to dictionary
         duty_dict = {}
         for _, row in grouped_df.iterrows():
-            duty_dict[row['Item Name']] = {
+            duty_dict[row['Item_Name']] = {
                 'hsn': row['HSN1'],
                 'bcd': row['Final BCD'],
                 'sws': row['Final SWS'],
@@ -122,7 +122,7 @@ def create_checking_list():
   # Replace with actual index of "P/N" column
                 'Category': 1,  # Replace with actual index of "Model Number" column
  # Replace with actual index of "Unit Price USD" column
-                'Item Name':3,
+                'Item_Name':3,
             }
             
             # Create a new DataFrame with selected columns
@@ -137,8 +137,8 @@ def create_checking_list():
             # Then add other columns except Item# (since it's already added)
             for new_name, idx in column_indices.items():
                 if new_name != 'Item#':  # Skip Item# as it's already added
-                    # For Item Name column, split by '-' and take only the part before it
-                    if new_name == 'Item Name':
+                    # For Item_Name column, split by '-' and take only the part before it
+                    if new_name == 'Item_Name':
                         sheet_df[new_name] = df.iloc[:, idx].apply(lambda x: str(x).split('-')[0].strip() if pd.notna(x) and '-' in str(x) else x)
                     else:
                         sheet_df[new_name] = df.iloc[:, idx]
@@ -154,10 +154,10 @@ def create_checking_list():
             sheet_df['Welfare'] = ''
             sheet_df['IGST'] = ''
 
-            # Fill duty rate information for rows with Item Name
+            # Fill duty rate information for rows with Item_Name
             for idx, row in sheet_df.iterrows():
-                if pd.notna(row['Item Name']) and row['Item Name'] in duty_rates:
-                    rates = duty_rates[row['Item Name']]
+                if pd.notna(row['Item_Name']) and row['Item_Name'] in duty_rates:
+                    rates = duty_rates[row['Item_Name']]
                     sheet_df.at[idx, 'HSN'] = rates['hsn']
                     sheet_df.at[idx, 'Duty'] = rates['bcd']
                     sheet_df.at[idx, 'Welfare'] = rates['sws']
@@ -166,8 +166,8 @@ def create_checking_list():
             # Then add other columns except Item# (since it's already added)
             for new_name, idx in column_indices.items():
                 if new_name != 'Item#':  # Skip Item# as it's already added
-                    # For Item Name column, split by '-' and take only the part before it
-                    if new_name == 'Item Name':
+                    # For Item_Name column, split by '-' and take only the part before it
+                    if new_name == 'Item_Name':
                         sheet_df[new_name] = df.iloc[:, idx].apply(lambda x: str(x).split('-')[0].strip() if pd.notna(x) and '-' in str(x) else x)
                     else:
                         sheet_df[new_name] = df.iloc[:, idx]
