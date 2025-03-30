@@ -12,8 +12,25 @@
             "args": ["checking_list.xlsx", "clean_check.xlsx", "check_report.xlsx"],
             "env": {
                 "PYTHONPATH": "${workspaceFolder}"
-            }
-        },
+            },
+
+
+        //     {
+        //         "name": "Python: Excel clean_check",
+        //         "type": "python",
+        //         "request": "launch",
+        //         "program": "${workspaceFolder}/clearn_check.py",
+        //         "console": "integratedTerminal",
+        //         "justMyCode": true,
+        //         "cwd": "${workspaceFolder}",
+        //         "args": [],
+        //         "env": {
+        //             "PYTHONPATH": "${workspaceFolder}"
+        //         }
+        // },
+
+
+
         // {
         //     "name": "Python: Excel Checkinglis",
         //     "type": "python",

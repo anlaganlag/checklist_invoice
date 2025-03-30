@@ -40,12 +40,24 @@ def process_excel(file_path):
                 # Convert Item# to integer before concatenating to remove the decimal
                 item_id = f"{current_invoice}_{int(row['Item#'])}"
                 item_name = str(row['Desc']).split('-')[0] if pd.notna(row['Desc']) else ''
+
+                                # 修改item_name的处理逻辑
+                desc = ''
+                if pd.notna(row['Desc']):
+                    # 分割字符串，取"-PART NO"之前的部分
+                    desc_parts = str(row['Desc']).split('-PART NO')
+                    desc = desc_parts[0]
+                    # 只保留字母数字和点号，并转换为大写
+                    desc = desc.replace('+OR-', '')
+                    desc = desc.replace('DEG', '')
+                    desc = desc.replace('-', '')
+                    desc = ''.join(char for char in desc if char.isalnum() or char in '.()').upper()
                 
                 result_rows.append({
                     'Item#': row['Item#'],
                     'ID': item_id,
                     'P/N': row['P/N'],
-                    'Desc': row['Desc'],
+                    'Desc': desc,
                     'Qty': row['Qty'],
                     'Price': row['Price'],
                     'Category': row['Category'],

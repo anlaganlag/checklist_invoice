@@ -139,12 +139,16 @@ def create_checking_list():
 
             # Then add other columns except Item# (since it's already added)
             for new_name, idx in column_indices.items():
-                if new_name != 'Item#':  # Skip Item# as it's already added
+                if new_name == 'Item#': 
+                    continue # Skip Item# as it's already added
                     # For Item_Name column, split by '-' and take only the part before it
-                    if new_name == 'Item_Name':
-                        sheet_df[new_name] = df.iloc[:, idx].apply(lambda x: str(x).split('-')[0].strip() if pd.notna(x) and '-' in str(x) else x)
-                    else:
-                        sheet_df[new_name] = df.iloc[:, idx]
+                if new_name == 'Item_Name':
+                    sheet_df[new_name] = df.iloc[:, idx].apply(lambda x: str(x).split('-')[0].strip() if pd.notna(x) and '-' in str(x) else x)
+                elif new_name == 'Desc':
+                    # Clean the description text to only keep alphanumeric, dots, hyphens and parentheses
+                    sheet_df[new_name] = df.iloc[:, idx].apply(lambda x: ''.join(char.upper() for char in str(x) if char.isalnum() or char in '.()').replace('Φ', '').replace('Ω', '').replace('-', '') if pd.notna(x) else x)
+                else:
+                    sheet_df[new_name] = df.iloc[:, idx]
 
             
             # Create ID in the first column
@@ -166,18 +170,9 @@ def create_checking_list():
                     sheet_df.at[idx, 'Welfare'] = rates['sws']
                     sheet_df.at[idx, 'IGST'] = rates['igst']
             
-            # Then add other columns except Item# (since it's already added)
-            for new_name, idx in column_indices.items():
-                if new_name != 'Item#':  # Skip Item# as it's already added
-                    # For Item_Name column, split by '-' and take only the part before it
-                    if new_name == 'Item_Name':
-                        sheet_df[new_name] = df.iloc[:, idx].apply(lambda x: str(x).split('-')[0].strip() if pd.notna(x) and '-' in str(x) else x)
-                    else:
-                        sheet_df[new_name] = df.iloc[:, idx]
 
-            
-            # Create ID in the first column
-            sheet_df.loc[1:,'ID'] = processed_sheet_name + '_' + sheet_df['Item#'].astype(str)
+
+
             
             # Append to the final DataFrame
             final_df = pd.concat([final_df, sheet_df], ignore_index=True)
