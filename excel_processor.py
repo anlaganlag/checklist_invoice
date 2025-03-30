@@ -10,10 +10,11 @@ def get_duty_rates():
     try:
         # Read dutyRate.xlsx
         df = pd.read_excel('dutyRate.xlsx')
-        python
+        
         # Group by Item_Name and aggregate other columns
-        grouped_df = df.groupby('Item_Name').agg({
+        grouped_df = df.groupby('Item Name').agg({
             'HSN1': lambda x: ' '.join(str(i) for i in x if pd.notna(i)),  # Concatenate HSN1 with space
+            'HSN2': lambda x: ' '.join(str(i) for i in x if pd.notna(i)),  # Add HSN2
             'Final BCD': 'min',
             'Final SWS': 'min',
             'Final IGST': 'min'
@@ -22,8 +23,10 @@ def get_duty_rates():
         # Convert DataFrame to dictionary
         duty_dict = {}
         for _, row in grouped_df.iterrows():
-            duty_dict[row['Item_Name']] = {
-                'hsn': row['HSN1'],
+            # Use HSN2 if HSN1 is empty
+            hsn_value = row['HSN1'] if pd.notna(row['HSN1']) and row['HSN1'].strip() != '' else row['HSN2']
+            duty_dict[row['Item Name']] = {
+                'hsn': hsn_value,
                 'bcd': row['Final BCD'],
                 'sws': row['Final SWS'],
                 'igst': row['Final IGST']
@@ -117,8 +120,8 @@ def create_checking_list():
                 'Item#': 0, 
                 'P/N': 2,  
                 'Desc': 3, 
-                'Qty': 6,    # Replace with actual index of "Quantity PCS" column
-                'Price': 7,    # Replace with actual index of "Description" column
+                'Qty': 5,    # Replace with actual index of "Quantity PCS" column
+                'Price': 6,    # Replace with actual index of "Description" column
   # Replace with actual index of "P/N" column
                 'Category': 1,  # Replace with actual index of "Model Number" column
  # Replace with actual index of "Unit Price USD" column
@@ -186,38 +189,15 @@ def create_checking_list():
         # Save to new Excel file
         try:
             new_df.to_excel('checking_list.xlsx', index=False)
-            # Open Excel file and keep it open
-            import win32com.client
-            excel = win32com.client.Dispatch("Excel.Application")
-            excel.Visible = True
-            workbook = excel.Workbooks.Open(os.path.abspath('checking_list.xlsx'))
-            print("\nSuccessfully created checking_list.xlsx")
-            
-            # Don't quit Excel - let it stay open
-            # excel.Quit()
-        except PermissionError:
-            import win32com.client
-            # Try to close Excel file if it's open
-            excel = win32com.client.Dispatch("Excel.Application")
-            try:
-                for wb in excel.Workbooks:
-                    try:
-                        if hasattr(wb, 'FullName') and os.path.abspath(wb.FullName) == os.path.abspath('checking_list.xlsx'):
-                            wb.Close(SaveChanges=False)
-                    except Exception as wb_error:
-                        print(f"Warning: Could not close workbook: {str(wb_error)}")
-                excel.Quit()
-            except Exception as excel_error:
-                print(f"Warning: Error when closing Excel: {str(excel_error)}")
-                # Try to force quit Excel if possible
-                try:
-                    excel.Quit()
-                except:
-                    pass
-            # Try to save again
-            new_df.to_excel('checking_list.xlsx', index=False)
+            # Try a simpler approach using os.startfile instead of COM automation
             os.startfile('checking_list.xlsx')
-        print("\nSuccessfully created checking_list.xlsx")
+            print("\nSuccessfully created checking_list.xlsx")
+        except PermissionError:
+            print("Error: The file is currently open. Please close it and try again.")
+            return False
+        except Exception as e:
+            print(f"Error opening the file: {str(e)}")
+            return False
         return True
         
     except Exception as e:

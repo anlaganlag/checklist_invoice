@@ -13,6 +13,19 @@
             "env": {
                 "PYTHONPATH": "${workspaceFolder}"
             }
-        }
+        },
+        // {
+        //     "name": "Python: Excel Checkinglis",
+        //     "type": "python",
+        //     "request": "launch",
+        //     "program": "${workspaceFolder}/excel_processor.py",
+        //     "console": "integratedTerminal",
+        //     "justMyCode": true,
+        //     "cwd": "${workspaceFolder}",
+        //     "args": [],
+        //     "env": {
+        //         "PYTHONPATH": "${workspaceFolder}"
+        //     }
+        // }
     ]
 }

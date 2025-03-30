@@ -34,9 +34,20 @@ def compare_excels(file1, file2, output_file):
             if not matching_row.empty:
                 row2 = matching_row.iloc[0]
                 diff_cols = []
-                for col in df1.columns[1:]:
-                    if row1[col] != row2[col]:
+                for col in df1.columns[1:]:  # 跳过ID列
+                    # 跳过Item_Name列的比对
+                    if col == 'Item_Name':
+                        continue
+                    
+                    # 对Price列使用0.5%的误差范围
+                    if col == 'Price':
+                        tolerance = row1[col] * 0.005  # 0.5%的误差
+                        if abs(row1[col] - row2[col]) > tolerance:
+                            diff_cols.append(col)
+                    # 其他列使用精确比对
+                    elif row1[col] != row2[col]:
                         diff_cols.append(col)
+                        
                 if diff_cols:
                     diff_info = {'ID': id1}
                     for col in diff_cols:
@@ -72,4 +83,17 @@ if __name__ == "__main__":
     print(f"Looking for files:\n  {file1}\n  {file2}")
     
     compare_excels(file1, file2, output_file)
+    
+    # 自动打开结果文件并等待用户输入
+    try:
+        if os.path.exists(output_file):
+            os.startfile(os.path.abspath(output_file))
+            print("\n结果文件已打开")
+            input("按回车键退出程序...")  # 防止程序闪退
+        else:
+            print(f"\n未找到结果文件: {output_file}")
+            input("按回车键退出程序...")  # 防止程序闪退
+    except Exception as e:
+        print(f"\n打开文件时出错: {e}")
+        input("按回车键退出程序...")  # 防止程序闪退
     
