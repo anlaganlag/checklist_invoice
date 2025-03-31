@@ -63,6 +63,9 @@ def create_checking_list():
         current_sheet_cnt = 0
         sheet_cnt = len(original_sheet_names)
         
+        # Initialize DataFrame for new descriptions
+        new_descriptions_df = pd.DataFrame(columns=[])
+
         # Process each sheet starting from the second one
         for i, original_sheet_name in enumerate(original_sheet_names):
             print(f"Attempting to access sheet: {original_sheet_name}")
@@ -126,7 +129,7 @@ def create_checking_list():
   # Replace with actual index of "P/N" column
                 'Category': 1,  # Replace with actual index of "Model Number" column
  # Replace with actual index of "Unit Price USD" column
-                'ORI_DESC':3,
+                # 'ORI_DESC':3,
                 'Item_Name':3,
             }
             
@@ -162,15 +165,31 @@ def create_checking_list():
             sheet_df['Duty'] = ''
             sheet_df['Welfare'] = ''
             sheet_df['IGST'] = ''
+            unique_desc = set()
 
-            # Fill duty rate information for rows with Item_Name
+            # Fill duty rate information and collect unmatched items
             for idx, row in sheet_df.iterrows():
-                if pd.notna(row['Item_Name']) and row['Item_Name'] in duty_rates:
-                    rates = duty_rates[row['Item_Name']]
-                    sheet_df.at[idx, 'HSN'] = rates['hsn']
-                    sheet_df.at[idx, 'Duty'] = rates['bcd']
-                    sheet_df.at[idx, 'Welfare'] = rates['sws']
-                    sheet_df.at[idx, 'IGST'] = rates['igst']
+                itemName = row['Item_Name']
+                if pd.notna(itemName) and itemName != '':
+                    if itemName in duty_rates:
+                        rates = duty_rates[itemName]
+                        sheet_df.at[idx, 'HSN'] = rates['hsn']
+                        sheet_df.at[idx, 'Duty'] = rates['bcd']
+                        sheet_df.at[idx, 'Welfare'] = rates['sws']
+                        sheet_df.at[idx, 'IGST'] = rates['igst']
+                    else:
+                        sheet_df.at[idx, 'HSN'] = '新货描'
+                        sheet_df.at[idx, 'Duty'] = '新货描'
+                        sheet_df.at[idx, 'Welfare'] = '新货描'
+                        sheet_df.at[idx, 'IGST'] = '新货描'
+                        if itemName not in unique_desc:
+                            unique_desc.add(itemName)
+                        # Add unmatched items to new_descriptions_df
+                            new_descriptions_df = pd.concat([new_descriptions_df, pd.DataFrame({
+                                '发票及项号': [row['ID']],
+                                '新货描': [row['ORI_DESC']],
+                                'Item Name': [itemName],
+                            })], ignore_index=True)
             
 
 
@@ -183,20 +202,32 @@ def create_checking_list():
         new_df = final_df
         import os
 
-        # Save to new Excel file
+        # Save both files
         try:
             new_df.to_excel('checking_list.xlsx', index=False)
-            # Try a simpler approach using os.startfile instead of COM automation
-            # os.startfile('checking_list.xlsx')
+            if not new_descriptions_df.empty:
+                # Create Excel writer with xlsxwriter engine
+                with pd.ExcelWriter('new_desc.xlsx', engine='xlsxwriter') as writer:
+                    new_descriptions_df.to_excel(writer, index=False)
+                    # Get the xlsxwriter workbook and worksheet objects
+                    workbook = writer.book
+                    worksheet = writer.sheets['Sheet1']
+                    # Set a fixed width of 20 for all columns
+                    for i, col in enumerate(new_descriptions_df.columns):
+                        if col == '新货描':
+                            worksheet.set_column(i, i, 100)
+                        else:
+                            worksheet.set_column(i, i, 20)
+                print("\n新增货描已保存至 new_desc.xlsx")
             print("\nSuccessfully created checking_list.xlsx")
+            return True
         except PermissionError:
             print("Error: The file is currently open. Please close it and try again.")
             return False
         except Exception as e:
             print(f"Error opening the file: {str(e)}")
             return False
-        return True
-        
+
     except Exception as e:
         print(f"An error occurred: {str(e)}")
         return False

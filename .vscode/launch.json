@@ -2,18 +2,18 @@
     "version": "0.2.0",
     "configurations": [
 
-        {
-            "name": "Python: Excel Comparison",
-            "type": "python",
-            "request": "launch",
-            "program": "${workspaceFolder}/create_report.py",
-            "console": "integratedTerminal",
-            "justMyCode": true,
-            "cwd": "${workspaceFolder}",
-            "args": ["checking_list.xlsx", "clean_check.xlsx", "check_report.xlsx"],
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}"
-        },
+        // {
+        //     "name": "Python: Excel Comparison",
+        //     "type": "python",
+        //     "request": "launch",
+        //     "program": "${workspaceFolder}/create_report.py",
+        //     "console": "integratedTerminal",
+        //     "justMyCode": true,
+        //     "cwd": "${workspaceFolder}",
+        //     "args": ["checking_list.xlsx", "clean_check.xlsx", "check_report.xlsx"],
+        //     "env": {
+        //         "PYTHONPATH": "${workspaceFolder}"
+        // },
 
 
         //     {

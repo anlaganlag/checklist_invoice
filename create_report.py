@@ -64,7 +64,7 @@ def compare_excels(file1, file2, output_file):
                 worksheet = writer.sheets['Sheet1']
                 # Set a fixed width of 20 for all columns
                 for i, col in enumerate(diff_df.columns):
-                    worksheet.set_column(i, i, 20)
+                    worksheet.set_column(i, i, 40)
             print(f"差异已保存到 {output_file}")
         else:
             print("两个 Excel 文件内容一致。")
@@ -81,8 +81,8 @@ if __name__ == "__main__":
         file2 = sys.argv[2]
         output_file = sys.argv[3] if len(sys.argv) > 3 else 'differences.xlsx'
     else:
-        file1 = 'file1.xlsx'
-        file2 = 'file2.xlsx'
+        file1 = 'checking_list.xlsx'
+        file2 = 'clean_check.xlsx'
         output_file = 'differences.xlsx'
     
     # Print current working directory and file paths for debugging
