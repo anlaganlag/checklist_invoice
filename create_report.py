@@ -63,13 +63,13 @@ def compare_excels(file1, file2, output_file):
             diff_df = pd.DataFrame(diff_data)
             # Create Excel writer with xlsxwriter engine
             with pd.ExcelWriter(output_file, engine='xlsxwriter') as writer:
-                diff_df.to_excel(writer, index=False)
+                diff_df.to_excel(writer, index=False, sheet_name="checkList和进口发票比对")
                 # Get the xlsxwriter workbook and worksheet objects
                 workbook = writer.book
-                worksheet = writer.sheets['Sheet1']
+                worksheet = writer.sheets["checkList和进口发票比对"]
                 # Set a fixed width of 20 for all columns
                 for i, col in enumerate(diff_df.columns):
-                    worksheet.set_column(i, i, 20)
+                    worksheet.set_column(i, i, 24)
             print(f"差异已保存到 {output_file}")
         else:
             print("两个 Excel 文件内容一致。")
