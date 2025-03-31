@@ -43,8 +43,7 @@
        - Duty vs 最终BCD
        - Welfare vs 最终SWS
        - IGST vs 最终IGST
-       - Cus AIDC vs 最终AIDC
-    f) **新材料处理**：
+    f) **新增Item Name处理**：
        - 未识别物料添加至关税率汇总文件底部并标记为'新增条目'
        - 税率显示格式：原税率 -> 新税率项目（如：15.0 -> 新税率项目）
        - HSN编码使用纯数字格式，不带小数点

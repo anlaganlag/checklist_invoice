@@ -127,7 +127,6 @@ def create_checking_list():
                 'Qty': 5,    # Replace with actual index of "Quantity PCS" column
                 'Price': 6,    # Replace with actual index of "Description" column
   # Replace with actual index of "P/N" column
-                'Category': 1,  # Replace with actual index of "Model Number" column
  # Replace with actual index of "Unit Price USD" column
                 # 'ORI_DESC':3,
                 'Item_Name':3,
@@ -187,7 +186,6 @@ def create_checking_list():
                         # Add unmatched items to new_descriptions_df
                             new_descriptions_df = pd.concat([new_descriptions_df, pd.DataFrame({
                                 '发票及项号': [row['ID']],
-                                '新货描': [row['ORI_DESC']],
                                 'Item Name': [itemName],
                             })], ignore_index=True)
             

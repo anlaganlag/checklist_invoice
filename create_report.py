@@ -5,8 +5,13 @@ import os
 
 def compare_excels(file1, file2, output_file):
     try:
-        df1 = pd.read_excel(file1)
-        df2 = pd.read_excel(file2)
+        # 指定所有列都按字符串类型读取
+        df1 = pd.read_excel(file1, dtype=str)
+        df2 = pd.read_excel(file2, dtype=str)
+        
+        # 将Price列转换为float类型，因为它需要进行数值计算
+        df1['Price'] = pd.to_numeric(df1['Price'], errors='coerce')
+        df2['Price'] = pd.to_numeric(df2['Price'], errors='coerce')
 
         # Print detailed information about the columns
         print("\nFile 1 columns:")
@@ -39,9 +44,9 @@ def compare_excels(file1, file2, output_file):
                     if col == 'Item_Name':
                         continue
                     
-                    # 对Price列使用0.5%的误差范围
+                    # 对Price列使用1.1%的误差范围
                     if col == 'Price':
-                        tolerance = row1[col] * 0.005  # 0.5%的误差
+                        tolerance = row1[col] * 0.011  # 1.1%的误差
                         if abs(row1[col] - row2[col]) > tolerance:
                             diff_cols.append(col)
                     # 其他列使用精确比对
@@ -64,7 +69,7 @@ def compare_excels(file1, file2, output_file):
                 worksheet = writer.sheets['Sheet1']
                 # Set a fixed width of 20 for all columns
                 for i, col in enumerate(diff_df.columns):
-                    worksheet.set_column(i, i, 40)
+                    worksheet.set_column(i, i, 20)
             print(f"差异已保存到 {output_file}")
         else:
             print("两个 Excel 文件内容一致。")
