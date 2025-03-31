@@ -187,6 +187,10 @@ def create_checking_list():
                             new_descriptions_df = pd.concat([new_descriptions_df, pd.DataFrame({
                                 '发票及项号': [row['ID']],
                                 'Item Name': [itemName],
+                                'Final BCD': [rates['bcd']],
+                                'Final SWS': [rates['sws']],
+                                'Final IGST': [rates['igst']],
+                                'HSN1': [rates['hsn']]
                             })], ignore_index=True)
             
 
@@ -203,48 +207,55 @@ def create_checking_list():
         # Save both files
         try:
             if not new_descriptions_df.empty:
-                # Create a backup of dutyRate.xlsx with new descriptions added
-                try:
-                    # Read the original dutyRate.xlsx file
-                    duty_rate_df = pd.read_excel('dutyRate.xlsx')
-                    
-                    # Create a new Excel file with the original data
-                    with pd.ExcelWriter('dutyRateNew.xlsx', engine='xlsxwriter') as writer:
-                        duty_rate_df.to_excel(writer, index=False, sheet_name='CCTV')
-                        
-                        # Add new descriptions to a new sheet
-                        new_descriptions_df.to_excel(writer, sheet_name='新货描', index=False)
-                        
-                        # Format the sheets
-                        workbook = writer.book
-                        
-                        # Format the original sheet
-                        worksheet1 = writer.sheets['CCTV']
-                        for i, col in enumerate(duty_rate_df.columns):
-                            worksheet1.set_column(i, i, 15)
-                            
-                        # Format the new descriptions sheet
-                        worksheet2 = writer.sheets['新货描']
-                        for i, col in enumerate(new_descriptions_df.columns):
-                            worksheet2.set_column(i, i, 20)
-                    
-                    print("\n新增货描已添加至 dutyRateNew.xlsx")
-                except Exception as e:
-                    print(f"Error creating dutyRateNew.xlsx: {str(e)}")
+                # Ensure new_descriptions_df has the required columns
+                required_columns = ['发票及项号', 'Item Name', 'Final BCD', 'Final SWS', 'Final IGST', 'HSN1']
                 
-                # Still create the original new_desc.xlsx file
-                with pd.ExcelWriter('new_desc.xlsx', engine='xlsxwriter') as writer:
-                    new_descriptions_df.to_excel(writer, index=False)
-                    # Get the xlsxwriter workbook and worksheet objects
+                # Create or ensure all required columns exist
+                for col in required_columns:
+                    if col not in new_descriptions_df.columns:
+                        new_descriptions_df[col] = ''  # Add empty column if missing
+                
+                # Read the original dutyRate.xlsx file
+                duty_rate_df = pd.read_excel('dutyRate.xlsx')
+                
+                # Create a new Excel file with the original data
+                with pd.ExcelWriter('newDutyRate.xlsx', engine='xlsxwriter') as writer:
+                    duty_rate_df.to_excel(writer, index=False, sheet_name='CCTV')
+                    
+                    # Add new descriptions to a new sheet with required columns
+                    new_descriptions_df[required_columns].to_excel(writer, sheet_name='newDutyRate', index=False)
+                    
+                    # Format the sheets
                     workbook = writer.book
-                    worksheet = writer.sheets['Sheet1']
-                    # Set a fixed width of 20 for all columns
-                    for i, col in enumerate(new_descriptions_df.columns):
-                        if col == '新货描':
-                            worksheet.set_column(i, i, 100)
+                    
+                    # Format the original sheet
+                    worksheet1 = writer.sheets['CCTV']
+                    for i, col in enumerate(duty_rate_df.columns):
+                        worksheet1.set_column(i, i, 15)
+                        
+                    # Format the new descriptions sheet
+                    worksheet2 = writer.sheets['newDutyRate']
+                    for i, col in enumerate(required_columns):
+                        if col == 'Item Name':
+                            worksheet2.set_column(i, i, 40)  # Wider column for item name
                         else:
-                            worksheet.set_column(i, i, 20)
-                print("\n新增货描已保存至 new_desc.xlsx")
+                            worksheet2.set_column(i, i, 15)
+                
+                print("\n新增货描已添加至 newDutyRate.xlsx")
+                
+                # # Still create the original new_desc.xlsx file
+                # with pd.ExcelWriter('new_desc.xlsx', engine='xlsxwriter') as writer:
+                #     new_descriptions_df.to_excel(writer, index=False)
+                #     # Get the xlsxwriter workbook and worksheet objects
+                #     workbook = writer.book
+                #     worksheet = writer.sheets['Sheet1']
+                #     # Set a fixed width of 20 for all columns
+                #     for i, col in enumerate(new_descriptions_df.columns):
+                #         if col == '新货描' or col == 'Item Name':
+                #             worksheet.set_column(i, i, 100)
+                #         else:
+                #             worksheet.set_column(i, i, 20)
+                # print("\n新增货描已保存至 new_desc.xlsx")
             
             new_df.to_excel('checking_list.xlsx', index=False)
             print("\nSuccessfully created checking_list.xlsx")

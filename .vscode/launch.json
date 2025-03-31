@@ -2,18 +2,18 @@
     "version": "0.2.0",
     "configurations": [
 
-                {
-            "name": "Python: Excel Comparison",
-            "type": "python",
-            "request": "launch",
-            "program": "${workspaceFolder}/run_all_tasks.py",
-            "console": "integratedTerminal",
-            "justMyCode": true,
-            "cwd": "${workspaceFolder}",
-            "args": ["checking_list.xlsx", "clean_check.xlsx", "check_report.xlsx"],
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}"
-        },
+        //         {
+        //     "name": "Python: Excel Comparison",
+        //     "type": "python",
+        //     "request": "launch",
+        //     "program": "${workspaceFolder}/run_all_tasks.py",
+        //     "console": "integratedTerminal",
+        //     "justMyCode": true,
+        //     "cwd": "${workspaceFolder}",
+        //     "args": ["checking_list.xlsx", "clean_check.xlsx", "check_report.xlsx"],
+        //     "env": {
+        //         "PYTHONPATH": "${workspaceFolder}"
+        // },
 
         // {
         //     "name": "Python: Excel Comparison",
@@ -45,18 +45,18 @@
 
 
 
-        // {
-        //     "name": "Python: Excel Checkinglis",
-        //     "type": "python",
-        //     "request": "launch",
-        //     "program": "${workspaceFolder}/create_check.py",
-        //     "console": "integratedTerminal",
-        //     "justMyCode": true,
-        //     "cwd": "${workspaceFolder}",
-        //     "args": [],
-        //     "env": {
-        //         "PYTHONPATH": "${workspaceFolder}"
-        //     }
-        // }
+        {
+            "name": "Python: Excel Checkinglis",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/create_check.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}",
+            "args": [],
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
+        }
     ]
 }
