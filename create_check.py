@@ -126,6 +126,7 @@ def create_checking_list():
   # Replace with actual index of "P/N" column
                 'Category': 1,  # Replace with actual index of "Model Number" column
  # Replace with actual index of "Unit Price USD" column
+                'ORI_DESC':3,
                 'Item_Name':3,
             }
             

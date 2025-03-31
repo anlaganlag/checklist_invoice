@@ -19,9 +19,9 @@ def run_script(script_name):
 
 def main():
     # 按顺序执行三个脚本
-    run_script("clearn_check.py")
-    run_script("excel_processor.py")
-    subprocess.run([sys.executable, "excel_comparison.py", 
+    run_script("clean_check.py")
+    run_script("create_check.py")
+    subprocess.run([sys.executable, "create_report.py", 
                 "checking_list.xlsx", "clean_check.xlsx", "check_report.xlsx"],
                cwd=os.path.dirname(os.path.abspath(__file__)),
                check=True)    

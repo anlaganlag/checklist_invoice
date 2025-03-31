@@ -1,25 +1,26 @@
 {
     "version": "0.2.0",
     "configurations": [
+
         {
             "name": "Python: Excel Comparison",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/excel_comparison.py",
+            "program": "${workspaceFolder}/create_report.py",
             "console": "integratedTerminal",
             "justMyCode": true,
             "cwd": "${workspaceFolder}",
             "args": ["checking_list.xlsx", "clean_check.xlsx", "check_report.xlsx"],
             "env": {
                 "PYTHONPATH": "${workspaceFolder}"
-            },
+        },
 
 
         //     {
         //         "name": "Python: Excel clean_check",
         //         "type": "python",
         //         "request": "launch",
-        //         "program": "${workspaceFolder}/clearn_check.py",
+        //         "program": "${workspaceFolder}/clean_check.py",
         //         "console": "integratedTerminal",
         //         "justMyCode": true,
         //         "cwd": "${workspaceFolder}",
@@ -35,7 +36,7 @@
         //     "name": "Python: Excel Checkinglis",
         //     "type": "python",
         //     "request": "launch",
-        //     "program": "${workspaceFolder}/excel_processor.py",
+        //     "program": "${workspaceFolder}/create_check.py",
         //     "console": "integratedTerminal",
         //     "justMyCode": true,
         //     "cwd": "${workspaceFolder}",
