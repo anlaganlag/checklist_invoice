@@ -183,7 +183,7 @@ def create_checking_list():
                         sheet_df.at[idx, 'IGST'] = '新货描'
                         if itemName not in unique_desc:
                             unique_desc.add(itemName)
-                        # Add unmatched items to new_descriptions_df
+                     # Add unmatched items to new_descriptions_df
                             new_descriptions_df = pd.concat([new_descriptions_df, pd.DataFrame({
                                 '发票及项号': [row['ID']],
                                 'Item Name': [itemName],
@@ -193,15 +193,26 @@ def create_checking_list():
                                 'HSN1': [rates['hsn']]
                             })], ignore_index=True)
             
-
-
-
-            
             # Append to the final DataFrame
             final_df = pd.concat([final_df, sheet_df], ignore_index=True)
             
         # Rename final_df to new_df to maintain compatibility with existing code
         new_df = final_df
+        
+        # Group new_descriptions_df by Item Name
+        if not new_descriptions_df.empty:
+            # Group by Item Name and aggregate other columns
+            grouped_desc_df = new_descriptions_df.groupby('Item Name').agg({
+                '发票及项号': lambda x: ','.join(str(i) for i in x if pd.notna(i)),  # Concatenate invoice numbers with comma
+                'Final BCD': lambda x:min(i for i in x if pd.notna(i)),  # Take min value (should be empty)
+                'Final SWS': lambda x:min(i for i in x if pd.notna(i)),  # Take min value (should be empty)
+                'Final IGST': lambda x:min(i for i in x if pd.notna(i)), # Take min value (should be empty)
+                'HSN1': lambda x:min(i for i in x if pd.notna(i))        # Take min value (should be empty)
+            }).reset_index()
+            
+            # Replace new_descriptions_df with the grouped version
+            new_descriptions_df = grouped_desc_df
+        
         import os
 
         # Save both files
