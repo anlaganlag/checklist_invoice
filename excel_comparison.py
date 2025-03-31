@@ -51,8 +51,7 @@ def compare_excels(file1, file2, output_file):
                 if diff_cols:
                     diff_info = {'ID': id1}
                     for col in diff_cols:
-                        diff_info[f'{col}_file1'] = row1[col]
-                        diff_info[f'{col}_file2'] = row2[col]
+                        diff_info[f'{col}'] = f'{row2[col]} -> {row1[col]}'
                     diff_data.append(diff_info)
 
         if diff_data:
