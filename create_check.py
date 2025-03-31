@@ -202,9 +202,37 @@ def create_checking_list():
 
         # Save both files
         try:
-            new_df.to_excel('checking_list.xlsx', index=False)
             if not new_descriptions_df.empty:
-                # Create Excel writer with xlsxwriter engine
+                # Create a backup of dutyRate.xlsx with new descriptions added
+                try:
+                    # Read the original dutyRate.xlsx file
+                    duty_rate_df = pd.read_excel('dutyRate.xlsx')
+                    
+                    # Create a new Excel file with the original data
+                    with pd.ExcelWriter('dutyRateNew.xlsx', engine='xlsxwriter') as writer:
+                        duty_rate_df.to_excel(writer, index=False, sheet_name='CCTV')
+                        
+                        # Add new descriptions to a new sheet
+                        new_descriptions_df.to_excel(writer, sheet_name='新货描', index=False)
+                        
+                        # Format the sheets
+                        workbook = writer.book
+                        
+                        # Format the original sheet
+                        worksheet1 = writer.sheets['CCTV']
+                        for i, col in enumerate(duty_rate_df.columns):
+                            worksheet1.set_column(i, i, 15)
+                            
+                        # Format the new descriptions sheet
+                        worksheet2 = writer.sheets['新货描']
+                        for i, col in enumerate(new_descriptions_df.columns):
+                            worksheet2.set_column(i, i, 20)
+                    
+                    print("\n新增货描已添加至 dutyRateNew.xlsx")
+                except Exception as e:
+                    print(f"Error creating dutyRateNew.xlsx: {str(e)}")
+                
+                # Still create the original new_desc.xlsx file
                 with pd.ExcelWriter('new_desc.xlsx', engine='xlsxwriter') as writer:
                     new_descriptions_df.to_excel(writer, index=False)
                     # Get the xlsxwriter workbook and worksheet objects
@@ -217,6 +245,8 @@ def create_checking_list():
                         else:
                             worksheet.set_column(i, i, 20)
                 print("\n新增货描已保存至 new_desc.xlsx")
+            
+            new_df.to_excel('checking_list.xlsx', index=False)
             print("\nSuccessfully created checking_list.xlsx")
             return True
         except PermissionError:
