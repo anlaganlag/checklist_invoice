@@ -2,6 +2,8 @@ import pandas as pd
 import os
 
 def process_excel(file_path):
+
+    print("开始清理checkList文件")
     # 读取Excel文件
     df = pd.read_excel(file_path,skiprows=3)
     

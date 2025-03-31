@@ -39,6 +39,7 @@ def get_duty_rates():
 
 def create_checking_list():
     try:
+        print("开始创建检查清单")
         duty_rates = get_duty_rates()
         print(duty_rates)
 
@@ -185,7 +186,7 @@ def create_checking_list():
         try:
             new_df.to_excel('checking_list.xlsx', index=False)
             # Try a simpler approach using os.startfile instead of COM automation
-            os.startfile('checking_list.xlsx')
+            # os.startfile('checking_list.xlsx')
             print("\nSuccessfully created checking_list.xlsx")
         except PermissionError:
             print("Error: The file is currently open. Please close it and try again.")
