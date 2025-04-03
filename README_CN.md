@@ -1,4 +1,4 @@
-# 自定义清单验证系统
+# checklist检查工具
 
 ## 1. 流程概述 🌟
 
@@ -6,18 +6,18 @@
 
 1. **🌱 开始** - 启动验证工作流
 2. **📥 加载文件** - 导入三个关键文档：
-   - Checklist文档(可能有差异)
+   - 海关CheckList文档(可能有差异)
    - 进口发票（精准数据）
    - 关税率汇总文件(可能货描不全)
 
 3. **🔄 标准化检查** - 确定是否需要数据标准化：
-   - **🔧 标准化Checklist文档**（如需要）
+   - **🔧 标准化海关CheckList文档**（如需要）
    - **📦 标准化进口发票**（如需要）
 
 4. **✅ 核心验证** - 交叉引用数据：
   - 三方数据对比：
-    1. Checklist文档（主数据）包含字段：Item#, ID(invoice#_item#),  P/N, Desc, Qty, Price,Item_Name, HSN, Duty, Welfare, IGST
-    2. 进口发票数据 Item#, ID(invoice#_item#),  P/N, Desc, Qty, Price,Item_Name, HSN, Duty, Welfare, IGST
+    1. 海关CheckList文档（主数据）包含字段：Item#, ID(invoice#_item#),  P/N, Desc, Qty, Price,Item_Name, HSN, BCD, SWS, IGST
+    2. 进口发票数据 Item#, ID(invoice#_item#),  P/N, Desc, Qty, Price,Item_Name, HSN, BCD, SWS, IGST
     3. 关税率汇总数据 Item Name,Final BCD,Final SWS,Final IGST
     
     
@@ -33,12 +33,12 @@
        - 允许描述存在等效表达（如温度符号"°"可以是"度"、"DEG"等）
        - 描述大致相同即可判定为同一物料
        - 对于细微差异的描述（如 CAPACITOR0.1UF1016VX5R(5585C)0402 vs CAPACITOR0.1UF1016VX5R(5585)0402"需人工确认",在最终报道展示,需人工判断
-    c) **数量验证**：检查Checklist的Qty需与发票的Quantity PCS一致
+    c) **数量验证**：检查海关CheckList的Qty需与发票的Quantity PCS一致
     d) **价格容差**：允许±1.1%(经验数值)的单位价格差异
     e) **税率核查**：确保HSN编码匹配关税率汇总文件并验证：
        - HSN编码以纯数字形式表示，无需小数点（如：85045090 -> 85051110）
-       - Duty vs 最终BCD
-       - Welfare vs 最终SWS
+       - BCD vs 最终BCD
+       - SWS vs 最终SWS
        - IGST vs 最终IGST
     f) **新增Item Name处理**：
        - 未识别物料添加至关税率汇总文件底部并标记为'新增条目'
@@ -56,7 +56,7 @@
 ```mermaid
 flowchart LR
     A[开始] --> B[加载文件] --> C{需要标准化?}
-    C -->|是| D[标准化Checking List] & E[标准化进口发票]
+    C -->|是| D[标准化海关CheckList] & E[标准化进口发票]
     C -->|否| F[验证]
     D & E --> F --> G{有效?}
     G -->|是| H[报告]
@@ -100,7 +100,7 @@ flowchart TD
 flowchart TD
     A[开始验证] --> B[加载标准化文件]
     B --> C[三方数据对比]
-    C --> D[Checking List文档]
+    C --> D[海关CheckList文档]
     C --> E[进口发票]
     C --> F[税率清单表]
     
