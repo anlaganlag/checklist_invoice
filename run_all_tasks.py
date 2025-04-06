@@ -19,10 +19,10 @@ def run_script(script_name):
 
 def main():
     # 按顺序执行三个脚本
-    run_script("clean_check.py")
-    run_script("create_check.py")
-    subprocess.run([sys.executable, "create_report.py", 
-                "checking_list.xlsx", "clean_check.xlsx", "check_report.xlsx"],
+    run_script("processing_checklist.py")
+    run_script("processing_invoices.py")
+    subprocess.run([sys.executable, "processing_report.py", 
+                "processed_invoices.xlsx", "processed_checklist.xlsx", "processed_report.xlsx"],
                cwd=os.path.dirname(os.path.abspath(__file__)),
                check=True)    
     print("\n所有任务已成功完成!")

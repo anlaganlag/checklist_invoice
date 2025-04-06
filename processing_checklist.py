@@ -74,22 +74,23 @@ def process_excel(file_path):
     return result_df
 
 # 使用示例
-file_path = 'c.xlsx'
+file_path = 'processing_checklist.xlsx'
 result = process_excel(file_path)
 
 # 保存结果
 try:
     # Try to save normally first
-    result.to_excel('clean_check.xlsx', index=False)
+    result.to_excel('processed_checklist.xlsx', index=False)
 except PermissionError:
     # If file exists and is locked/open, try to remove it first
     try:
-        os.remove('clean_check.xlsx')
+        os.remove('processed_checklist.xlsx') # Remove existing file if it exists
     except:
         pass
     # Try saving again after removing
-    result.to_excel('clean_check.xlsx', index=False)
+    result.to_excel('processed_checklist.xlsx', index=False)
 except Exception as e:
     print(f"Error saving file: {str(e)}")
+    print(f"Error occurred on line {e.__traceback__.tb_lineno}")
     # Try saving with a different filename
-    result.to_excel('clean_check_new.xlsx', index=False)
+    result.to_excel('processed_checklist.xlsx', index=False)

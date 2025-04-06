@@ -8,8 +8,8 @@ warnings.filterwarnings('ignore', message='Print area cannot be set to Defined n
 
 def get_duty_rates():
     try:
-        # Read dutyRate.xlsx
-        df = pd.read_excel('dutyRate.xlsx')
+        # Read duty_rate.xlsx
+        df = pd.read_excel('duty_rate.xlsx')
         
         # Group by Item_Name and aggregate other columns
         grouped_df = df.groupby('Item Name').agg({
@@ -34,7 +34,7 @@ def get_duty_rates():
         
         return duty_dict
     except Exception as e:
-        print(f"Error reading dutyRate.xlsx: {str(e)}")
+        print(f"Error reading duty_rate.xlsx: {str(e)}")
         return {}
 
 def create_checking_list():
@@ -44,7 +44,7 @@ def create_checking_list():
         print(duty_rates)
 
         # Get all sheet names
-        excel_file = pd.ExcelFile('import_invoice.xlsx')
+        excel_file = pd.ExcelFile('processing_invoices.xlsx')
         # Print all available sheet names
         print("Available sheets:", excel_file.sheet_names)
         
@@ -75,7 +75,7 @@ def create_checking_list():
             processed_sheet_name = processed_sheet_names[i]
             
             # Read the sheet using original name, skipping the first 12 rows
-            df = pd.read_excel('import_invoice.xlsx', sheet_name=original_sheet_name, skiprows=12)
+            df = pd.read_excel('processing_invoices.xlsx', sheet_name=original_sheet_name, skiprows=12)
             
             # Process rows to handle empty rows after numbered data
             processed_rows = []
@@ -226,11 +226,11 @@ def create_checking_list():
                     if col not in new_descriptions_df.columns:
                         new_descriptions_df[col] = ''  # Add empty column if missing
                 
-                # Read the original dutyRate.xlsx file
-                duty_rate_df = pd.read_excel('dutyRate.xlsx')
+                # Read the original duty_rate.xlsx file
+                duty_rate_df = pd.read_excel('duty_rate.xlsx')
                 
                 # Create a new Excel file with the original data
-                with pd.ExcelWriter('newDutyRate.xlsx', engine='xlsxwriter') as writer:
+                with pd.ExcelWriter('added_new_items.xlsx', engine='xlsxwriter') as writer:
                     duty_rate_df.to_excel(writer, index=False, sheet_name='CCTV')
                     
                     # Add new descriptions to a new sheet with required columns
@@ -252,10 +252,10 @@ def create_checking_list():
                         else:
                             worksheet2.set_column(i, i, 15)
                 
-                print("\n新增货描已添加至 newDutyRate.xlsx")
+                print("\n新增货描已添加至 added_new_items.xlsx")
                 
-                # # Still create the original new_desc.xlsx file
-                # with pd.ExcelWriter('new_desc.xlsx', engine='xlsxwriter') as writer:
+                # # Still create the original added_new_items.xlsx file
+                # with pd.ExcelWriter('added_new_items.xlsx', engine='xlsxwriter') as writer:
                 #     new_descriptions_df.to_excel(writer, index=False)
                 #     # Get the xlsxwriter workbook and worksheet objects
                 #     workbook = writer.book
@@ -266,10 +266,10 @@ def create_checking_list():
                 #             worksheet.set_column(i, i, 100)
                 #         else:
                 #             worksheet.set_column(i, i, 20)
-                # print("\n新增货描已保存至 new_desc.xlsx")
+                # print("\n新增货描已保存至 added_new_items.xlsx")
             
-            new_df.to_excel('checking_list.xlsx', index=False)
-            print("\nSuccessfully created checking_list.xlsx")
+            new_df.to_excel('processed_invoices.xlsx', index=False)
+            print("\nSuccessfully created processed_invoices.xlsx")
             return True
         except PermissionError:
             print("Error: The file is currently open. Please close it and try again.")

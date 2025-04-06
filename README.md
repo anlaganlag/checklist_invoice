@@ -1,6 +1,6 @@
 # Excel Data Processing Tool
 
-This tool extracts specific columns from an `import_invoice.xlsx` file and creates a simplified `checking_list.xlsx` file with renamed columns.
+This tool extracts specific columns from an `import_invoice.xlsx` file and creates a simplified `processing_invoice.xlsx` file with renamed columns.
 
 ## Overview
 
@@ -14,7 +14,7 @@ flowchart TD
     B --> C[Display all column names with indices]
     C --> D[Select specific columns by index]
     D --> E[Rename columns to new names]
-    E --> F[Save as checking_list.xlsx]
+    E --> F[Save as processing_invoice.xlsx]
     F --> G[End]
     
     B -- Error --> H[File not found]
@@ -52,11 +52,11 @@ python excel_processor.py
 
 3. The script will display all column names from the original file with their indices
 4. If needed, update the `column_indices` dictionary in the script to match the correct indices
-5. The script will generate a new file called `checking_list.xlsx` with the renamed columns
+5. The script will generate a new file called `processing_invoice.xlsx` with the renamed columns
 
 ## Column Mapping
 
-| New Column Name (checking_list.xlsx) | Column Index in import_invoice.xlsx | Original Purpose |
+| New Column Name (processing_invoice.xlsx) | Column Index in import_invoice.xlsx | Original Purpose |
 |--------------------------------------|-------------------------------------|------------------|
 | Item#                                | 0                                   | Item Numbers     |
 | P/N                                  | 2                                   | Part Number      |
@@ -77,7 +77,7 @@ The script includes basic error handling for:
 
 ## Example Output
 
-The resulting `checking_list.xlsx` file will contain only the selected columns with their new names:
+The resulting `processing_invoice.xlsx` file will contain only the selected columns with their new names:
 
 | Item# | P/N | Desc | Qty | Price |
 |-------|-----|------|-----|-------|

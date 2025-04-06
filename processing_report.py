@@ -84,11 +84,11 @@ if __name__ == "__main__":
     if len(sys.argv) > 2:
         file1 = sys.argv[1]
         file2 = sys.argv[2]
-        output_file = sys.argv[3] if len(sys.argv) > 3 else 'differences.xlsx'
+        output_file = sys.argv[3] if len(sys.argv) > 3 else 'processed_report.xlsx'
     else:
-        file1 = 'checking_list.xlsx'
-        file2 = 'clean_check.xlsx'
-        output_file = 'differences.xlsx'
+        file1 = 'processed_invoices.xlsx'
+        file2 = 'processed_checklist.xlsx'
+        output_file = 'processed_report.xlsx'
     
     # Print current working directory and file paths for debugging
     print(f"Current working directory: {os.getcwd()}")

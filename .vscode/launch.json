@@ -10,7 +10,7 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "cwd": "${workspaceFolder}",
-            "args": ["checking_list.xlsx", "clean_check.xlsx", "check_report.xlsx"],
+            "args": ["processed_invoices.xlsx", "processed_checklist.xlsx", "processed_report.xlsx"],
             "env": {
                 "PYTHONPATH": "${workspaceFolder}"
         },
@@ -19,11 +19,11 @@
         //     "name": "Python: Excel Comparison",
         //     "type": "python",
         //     "request": "launch",
-        //     "program": "${workspaceFolder}/create_report.py",
+        //     "program": "${workspaceFolder}/processing_report.py",
         //     "console": "integratedTerminal",
         //     "justMyCode": true,
         //     "cwd": "${workspaceFolder}",
-        //     "args": ["checking_list.xlsx", "clean_check.xlsx", "check_report.xlsx"],
+        //     "args": ["processed_invoices.xlsx", "processed_checklist.xlsx", "processed_report.xlsx"],
         //     "env": {
         //         "PYTHONPATH": "${workspaceFolder}"
         // },
@@ -33,7 +33,7 @@
         //         "name": "Python: Excel clean_check",
         //         "type": "python",
         //         "request": "launch",
-        //         "program": "${workspaceFolder}/clean_check.py",
+        //         "program": "${workspaceFolder}/processing_checklist.py",
         //         "console": "integratedTerminal",
         //         "justMyCode": true,
         //         "cwd": "${workspaceFolder}",
@@ -49,7 +49,7 @@
         //     "name": "Python: Excel Checkinglis",
         //     "type": "python",
         //     "request": "launch",
-        //     "program": "${workspaceFolder}/create_check.py",
+        //     "program": "${workspaceFolder}/processing_invoices.py",
         //     "console": "integratedTerminal",
         //     "justMyCode": true,
         //     "cwd": "${workspaceFolder}",

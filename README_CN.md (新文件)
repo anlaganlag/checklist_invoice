@@ -1,0 +1,27 @@
+# 进口商品核对系统
+
+## 文件命名规范
+| 文件类型          | 命名规则                  | 示例                      |
+|-------------------|--------------------------|--------------------------|
+| 原始发票文件       | Raw_开头                 | processing_invoices.xlsx |
+| 处理后的文件       | Processed_开头           | processed_invoices.xlsx |
+| 标准化文件         | Standardized_开头        | processed_checklist.xlsx |
+| 稅率数据文件         | 含有Duty_Rate             | duty_rate.xlsx   |
+| 差异报告文件       | Report_结尾              | processed_report.xlsx |
+
+## 使用流程
+1. 准备原始数据：
+   - 将进口发票保存为 `processing_invoices.xlsx`
+   - 维护税率主数据 `duty_rate.xlsx`
+
+2. 运行处理脚本：
+   ```bash
+   python processing_invoices.py
+   python processing_checklist.py 
+   python processing_report.py
+   ```
+
+3. 检查输出文件：
+   - ✅ `processed_invoices.xlsx` - 初步处理结果
+   - ✅ `processed_checklist.xlsx` - 标准化数据
+   - ✅ `processed_report.xlsx` - 差异报告 

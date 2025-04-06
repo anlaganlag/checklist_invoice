@@ -26,9 +26,11 @@ __pycache__/
 *$py.class
 *.so
 
-# Excel temp files
-~$*.xlsx
-~$*.xls
+# Excel files
+*.xlsx
+!duty_rate.xlsx  # 保留税率主数据文件
+!processing_invoices.xlsx  # 保留发票数据文件
+!processing_checklist.xlsx  # 保留原checklist
 
 # Python 虚拟环境
 venv/
@@ -50,6 +52,13 @@ ENV/
 
 # 日志文件
 *.log
+
+# 临时/生成文件
+/processed_invoices.xlsx
+/processed_checklist.xlsx
+/processed_report.xlsx
+/added_new_items.xlsx
+/clean_check_new.xlsx
 
 # 系统文件
 .DS_Store
