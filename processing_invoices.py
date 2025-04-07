@@ -1,6 +1,7 @@
 import pandas as pd
 import warnings
 import os
+import glob
 
 # Filter out the warning about print area
 warnings.filterwarnings('ignore', message='Print area cannot be set to Defined name')
@@ -38,14 +39,12 @@ def get_duty_rates():
         print(f"错误发生在 get_duty_rates 函数的第 {e.__traceback__.tb_lineno} 行")
         return {}
 
-def create_checking_list():
+def process_invoice_file(file_path, duty_rates):
     try:
-        print("开始创建检查清单")
-        duty_rates = get_duty_rates()
-        print(duty_rates)
-
+        print(f"\n处理发票文件: {file_path}")
+        
         # Get all sheet names
-        excel_file = pd.ExcelFile('input/processing_invoices.xlsx')
+        excel_file = pd.ExcelFile(file_path)
         # Print all available sheet names
         print("Available sheets:", excel_file.sheet_names)
         
@@ -76,7 +75,7 @@ def create_checking_list():
             processed_sheet_name = processed_sheet_names[i]
             
             # Read the sheet using original name, skipping the first 12 rows
-            df = pd.read_excel('input/processing_invoices.xlsx', sheet_name=original_sheet_name, skiprows=12)
+            df = pd.read_excel(file_path, sheet_name=original_sheet_name, skiprows=12)
             
             # Process rows to handle empty rows after numbered data
             processed_rows = []
@@ -107,11 +106,14 @@ def create_checking_list():
             # Convert processed rows back to DataFrame
             df = pd.DataFrame(processed_rows, columns=df.columns)
             
+            # Generate a unique file identifier from the file path
+            file_id = os.path.splitext(os.path.basename(file_path))[0]
+            file_suffix = file_id.replace('processing_invoices', '')  # Extract suffix like '1', '2', or ''
 
             if not df.empty:
                 # Create a row with empty values except for the first column which contains the sheet name
                 sheet_row_data = [""] * len(df.columns)
-                sheet_row_data[0] = f'{processed_sheet_name} Invoice {current_sheet_cnt}/{sheet_cnt}'
+                sheet_row_data[0] = f'{processed_sheet_name}{file_suffix} Invoice {current_sheet_cnt}/{sheet_cnt}'
                 sheet_row = pd.DataFrame([sheet_row_data], columns=df.columns)
                 df = pd.concat([sheet_row, df], ignore_index=True)
             
@@ -160,7 +162,6 @@ def create_checking_list():
             sheet_df.loc[1:,'ID'] = processed_sheet_name+ '_' + sheet_df['Item#'].astype(str)                        # Add duty rate columns after all other columns are set
             
             # Add duty rate columns after all other columns are set
-
             sheet_df['HSN'] = ''
             sheet_df['Duty'] = ''
             sheet_df['Welfare'] = ''
@@ -184,48 +185,79 @@ def create_checking_list():
                         sheet_df.at[idx, 'IGST'] = 'new item'
                         if itemName not in unique_desc:
                             unique_desc.add(itemName)
-                     # Add unmatched items to new_descriptions_df
+                            # Add unmatched items to new_descriptions_df
                             new_descriptions_df = pd.concat([new_descriptions_df, pd.DataFrame({
                                 '发票及项号': [row['ID']],
                                 'Item Name': [itemName],
-                                'Final BCD': [rates['bcd']],
-                                'Final SWS': [rates['sws']],
-                                'Final IGST': [rates['igst']],
-                                'HSN1': [rates['hsn']]
+                                'Final BCD': [''],  # Empty as this is a new item
+                                'Final SWS': [''],  # Empty as this is a new item
+                                'Final IGST': [''], # Empty as this is a new item
+                                'HSN1': ['']        # Empty as this is a new item
                             })], ignore_index=True)
             
             # Append to the final DataFrame
             final_df = pd.concat([final_df, sheet_df], ignore_index=True)
+        
+        return final_df, new_descriptions_df
+        
+    except Exception as e:
+        print(f"\n❌ 处理发票文件失败: {file_path}, 错误: {str(e)}")
+        print(f"错误发生在 process_invoice_file 函数的第 {e.__traceback__.tb_lineno} 行")
+        return pd.DataFrame(), pd.DataFrame()
+
+def create_checking_list():
+    try:
+        print("开始创建检查清单")
+        duty_rates = get_duty_rates()
+        print(duty_rates)
+
+        # Find all invoice files in the input directory
+        invoice_files = glob.glob('input/processing_invoices*.xlsx')
+        
+        if not invoice_files:
+            print("No invoice files found in input directory!")
+            return False
             
-        # Rename final_df to new_df to maintain compatibility with existing code
-        new_df = final_df
+        print(f"Found {len(invoice_files)} invoice files: {invoice_files}")
+        
+        # Initialize DataFrames for final results
+        all_invoices_df = pd.DataFrame()
+        all_new_items_df = pd.DataFrame()
+        
+        # Process each invoice file
+        for file_path in invoice_files:
+            invoices_df, new_items_df = process_invoice_file(file_path, duty_rates)
+            
+            # Combine results
+            all_invoices_df = pd.concat([all_invoices_df, invoices_df], ignore_index=True)
+            all_new_items_df = pd.concat([all_new_items_df, new_items_df], ignore_index=True)
         
         # Group new_descriptions_df by Item Name
-        if not new_descriptions_df.empty:
+        if not all_new_items_df.empty:
             # Group by Item Name and aggregate other columns
-            grouped_desc_df = new_descriptions_df.groupby('Item Name').agg({
+            grouped_desc_df = all_new_items_df.groupby('Item Name').agg({
                 '发票及项号': lambda x: ','.join(str(i) for i in x if pd.notna(i)),  # Concatenate invoice numbers with comma
-                'Final BCD': lambda x:min(i for i in x if pd.notna(i)),  # Take min value (should be empty)
-                'Final SWS': lambda x:min(i for i in x if pd.notna(i)),  # Take min value (should be empty)
-                'Final IGST': lambda x:min(i for i in x if pd.notna(i)), # Take min value (should be empty)
-                'HSN1': lambda x:min(i for i in x if pd.notna(i))        # Take min value (should be empty)
+                'Final BCD': 'first',  # Take first value (should be empty)
+                'Final SWS': 'first',  # Take first value (should be empty)
+                'Final IGST': 'first', # Take first value (should be empty)
+                'HSN1': 'first'        # Take first value (should be empty)
             }).reset_index()
             
-            # Replace new_descriptions_df with the grouped version
-            new_descriptions_df = grouped_desc_df
+            # Replace all_new_items_df with the grouped version
+            all_new_items_df = grouped_desc_df
         
         # Save both files
         try:
             os.makedirs('output', exist_ok=True)  # Add directory creation
             
-            if not new_descriptions_df.empty:
-                # Ensure new_descriptions_df has the required columns
+            if not all_new_items_df.empty:
+                # Ensure all_new_items_df has the required columns
                 required_columns = ['发票及项号', 'Item Name', 'Final BCD', 'Final SWS', 'Final IGST', 'HSN1']
                 
                 # Create or ensure all required columns exist
                 for col in required_columns:
-                    if col not in new_descriptions_df.columns:
-                        new_descriptions_df[col] = ''  # Add empty column if missing
+                    if col not in all_new_items_df.columns:
+                        all_new_items_df[col] = ''  # Add empty column if missing
                 
                 # Read the original duty_rate.xlsx file
                 duty_rate_df = pd.read_excel('input/duty_rate.xlsx')
@@ -235,7 +267,7 @@ def create_checking_list():
                     duty_rate_df.to_excel(writer, index=False, sheet_name='CCTV')
                     
                     # Add new descriptions to a new sheet with required columns
-                    new_descriptions_df[required_columns].to_excel(writer, sheet_name='newDutyRate', index=False)
+                    all_new_items_df[required_columns].to_excel(writer, sheet_name='newDutyRate', index=False)
                     
                     # Format the sheets
                     workbook = writer.book
@@ -254,8 +286,48 @@ def create_checking_list():
                             worksheet2.set_column(i, i, 15)
             
             # Update path for processed invoices
-            new_df.to_excel('output/processed_invoices.xlsx', index=False)
+            all_invoices_df.to_excel('output/processed_invoices.xlsx', index=False)
             print("\nSuccessfully created output/processed_invoices.xlsx")
+            
+            # Create a summary file with stats
+            summary_data = {
+                'Invoice File': [],
+                'Sheets Processed': [],
+                'Items Processed': [],
+                'New Items Found': []
+            }
+            
+            # Re-process files to get statistics
+            for file_path in invoice_files:
+                file_name = os.path.basename(file_path)
+                excel_file = pd.ExcelFile(file_path)
+                sheet_count = len(excel_file.sheet_names) - 1  # Skip first sheet
+                
+                # Count items in this file
+                file_df, file_new_items = process_invoice_file(file_path, duty_rates)
+                item_count = len(file_df) - sheet_count  # Subtract header rows
+                new_item_count = len(file_new_items)
+                
+                summary_data['Invoice File'].append(file_name)
+                summary_data['Sheets Processed'].append(sheet_count)
+                summary_data['Items Processed'].append(item_count)
+                summary_data['New Items Found'].append(new_item_count)
+            
+            # Create summary DataFrame
+            summary_df = pd.DataFrame(summary_data)
+            
+            # Add totals row
+            summary_df.loc[len(summary_df)] = [
+                'TOTAL', 
+                summary_df['Sheets Processed'].sum(),
+                summary_df['Items Processed'].sum(),
+                summary_df['New Items Found'].sum()
+            ]
+            
+            # Save summary
+            summary_df.to_excel('output/processing_summary.xlsx', index=False)
+            print("Successfully created output/processing_summary.xlsx")
+            
             return True
         except PermissionError:
             print("Error: The file is currently open. Please close it and try again.")

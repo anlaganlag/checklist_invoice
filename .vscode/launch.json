@@ -13,7 +13,7 @@
         //     "args": ["-Xfrozen_modules=off"]
         // },
         {
-            "name": "Python: Excel Comparison",
+            "name": "Python: Excel Comparison (Single File)",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/run_all_tasks.py",
@@ -32,6 +32,19 @@
                 "PYTHONPATH": "${workspaceFolder}"
             }
         },
+        // {
+        //     "name": "Python: Process Multiple Invoice Files",
+        //     "type": "python",
+        //     "request": "launch",
+        //     "program": "${workspaceFolder}/processing_invoices.py",
+        //     "console": "integratedTerminal",
+        //     "justMyCode": true,
+        //     "cwd": "${workspaceFolder}",
+        //     "args": [],
+        //     "env": {
+        //         "PYTHONPATH": "${workspaceFolder}"
+        //     }
+        // },
         // {
         //     "name": "Python: Excel Comparison",
         //     "type": "python",
