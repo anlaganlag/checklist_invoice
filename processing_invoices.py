@@ -177,10 +177,10 @@ def create_checking_list():
                         sheet_df.at[idx, 'Welfare'] = rates['sws']
                         sheet_df.at[idx, 'IGST'] = rates['igst']
                     else:
-                        sheet_df.at[idx, 'HSN'] = '新货描'
-                        sheet_df.at[idx, 'Duty'] = '新货描'
-                        sheet_df.at[idx, 'Welfare'] = '新货描'
-                        sheet_df.at[idx, 'IGST'] = '新货描'
+                        sheet_df.at[idx, 'HSN'] = 'new item'
+                        sheet_df.at[idx, 'Duty'] = 'new item'
+                        sheet_df.at[idx, 'Welfare'] = 'new item'
+                        sheet_df.at[idx, 'IGST'] = 'new item'
                         if itemName not in unique_desc:
                             unique_desc.add(itemName)
                      # Add unmatched items to new_descriptions_df
@@ -262,7 +262,7 @@ def create_checking_list():
                 #     worksheet = writer.sheets['Sheet1']
                 #     # Set a fixed width of 20 for all columns
                 #     for i, col in enumerate(new_descriptions_df.columns):
-                #         if col == '新货描' or col == 'Item Name':
+                #         if col == 'new item' or col == 'Item Name':
                 #             worksheet.set_column(i, i, 100)
                 #         else:
                 #             worksheet.set_column(i, i, 20)
