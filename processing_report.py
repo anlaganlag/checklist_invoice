@@ -74,38 +74,51 @@ def compare_excels(file1, file2, output_file):
         else:
             print("两个 Excel 文件内容一致。")
 
-    except FileNotFoundError:
-        print("错误: 文件未找到!")
+    except FileNotFoundError as e:
+        print(f"\n❌ 文件未找到: {str(e)}")
+        print(f"错误发生在 compare_excels 函数的第 {e.__traceback__.tb_lineno} 行")
     except Exception as e:
-        print(f"错误: 发生了一个未知错误: {e}")
+        print(f"\n❌ 发生未知错误: {str(e)}")
+        print(f"错误发生在 compare_excels 函数的第 {e.__traceback__.tb_lineno} 行")
+        raise
 
 
 if __name__ == "__main__":
-    if len(sys.argv) > 2:
-        file1 = sys.argv[1]
-        file2 = sys.argv[2]
-        output_file = sys.argv[3] if len(sys.argv) > 3 else 'processed_report.xlsx'
+    if len(sys.argv) > 5:  # 参数数量增加到6个
+        input_files = {
+            'invoices': sys.argv[1],
+            'checklist': sys.argv[2],
+            'duty_rate': sys.argv[3],  # 新增税率文件参数
+            'output_invoices': sys.argv[4],
+            'output_checklist': sys.argv[5],
+            'output_report': sys.argv[6] if len(sys.argv) > 6 else 'output/processed_report.xlsx'
+        }
     else:
-        file1 = 'processed_invoices.xlsx'
-        file2 = 'processed_checklist.xlsx'
-        output_file = 'processed_report.xlsx'
+        # 使用默认输入输出路径
+        input_files = {
+            'invoices': 'input/processing_invoices.xlsx',
+            'checklist': 'input/processing_checklist.xlsx',
+            'duty_rate': 'input/duty_rate.xlsx',
+            'output_invoices': 'output/processed_invoices.xlsx',
+            'output_checklist': 'output/processed_checklist.xlsx',
+            'output_report': 'output/processed_report.xlsx'
+        }
     
-    # Print current working directory and file paths for debugging
-    print(f"Current working directory: {os.getcwd()}")
-    print(f"Looking for files:\n  {file1}\n  {file2}")
+    # 创建输出目录
+    os.makedirs('output', exist_ok=True)
     
-    compare_excels(file1, file2, output_file)
+    # 调用处理流程（需要与其他处理脚本整合）
+    compare_excels(input_files['output_invoices'], 
+                 input_files['output_checklist'],
+                 input_files['output_report'])
     
-    # 自动打开结果文件并等待用户输入
     try:
-        if os.path.exists(output_file):
-            os.startfile(os.path.abspath(output_file))
-            print("\n结果文件已打开")
-            input("按回车键退出程序...")  # 防止程序闪退
-        else:
-            print(f"\n未找到结果文件: {output_file}")
-            input("按回车键退出程序...")  # 防止程序闪退
+        # Update path for opening file
+        output_path = os.path.abspath(input_files['output_report'])
+        if os.path.exists(output_path):
+            os.startfile(output_path)
     except Exception as e:
-        print(f"\n打开文件时出错: {e}")
+        print(f"\n❌ 打开结果文件失败: {str(e)}")
+        print(f"错误发生在第 {e.__traceback__.tb_lineno} 行")
         input("按回车键退出程序...")  # 防止程序闪退
     

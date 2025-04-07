@@ -63,3 +63,9 @@ ENV/
 # 系统文件
 .DS_Store
 Thumbs.db
+
+# New additions
+input/*
+!input/.gitkeep
+output/
+*.pyc

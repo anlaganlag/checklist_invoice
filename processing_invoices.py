@@ -9,7 +9,7 @@ warnings.filterwarnings('ignore', message='Print area cannot be set to Defined n
 def get_duty_rates():
     try:
         # Read duty_rate.xlsx
-        df = pd.read_excel('duty_rate.xlsx')
+        df = pd.read_excel('input/duty_rate.xlsx')
         
         # Group by Item_Name and aggregate other columns
         grouped_df = df.groupby('Item Name').agg({
@@ -34,7 +34,8 @@ def get_duty_rates():
         
         return duty_dict
     except Exception as e:
-        print(f"Error reading duty_rate.xlsx: {str(e)}")
+        print(f"\n❌ 读取税率文件失败: {str(e)}")
+        print(f"错误发生在 get_duty_rates 函数的第 {e.__traceback__.tb_lineno} 行")
         return {}
 
 def create_checking_list():
@@ -44,7 +45,7 @@ def create_checking_list():
         print(duty_rates)
 
         # Get all sheet names
-        excel_file = pd.ExcelFile('processing_invoices.xlsx')
+        excel_file = pd.ExcelFile('input/processing_invoices.xlsx')
         # Print all available sheet names
         print("Available sheets:", excel_file.sheet_names)
         
@@ -75,7 +76,7 @@ def create_checking_list():
             processed_sheet_name = processed_sheet_names[i]
             
             # Read the sheet using original name, skipping the first 12 rows
-            df = pd.read_excel('processing_invoices.xlsx', sheet_name=original_sheet_name, skiprows=12)
+            df = pd.read_excel('input/processing_invoices.xlsx', sheet_name=original_sheet_name, skiprows=12)
             
             # Process rows to handle empty rows after numbered data
             processed_rows = []
@@ -213,10 +214,10 @@ def create_checking_list():
             # Replace new_descriptions_df with the grouped version
             new_descriptions_df = grouped_desc_df
         
-        import os
-
         # Save both files
         try:
+            os.makedirs('output', exist_ok=True)  # Add directory creation
+            
             if not new_descriptions_df.empty:
                 # Ensure new_descriptions_df has the required columns
                 required_columns = ['发票及项号', 'Item Name', 'Final BCD', 'Final SWS', 'Final IGST', 'HSN1']
@@ -227,10 +228,10 @@ def create_checking_list():
                         new_descriptions_df[col] = ''  # Add empty column if missing
                 
                 # Read the original duty_rate.xlsx file
-                duty_rate_df = pd.read_excel('duty_rate.xlsx')
+                duty_rate_df = pd.read_excel('input/duty_rate.xlsx')
                 
                 # Create a new Excel file with the original data
-                with pd.ExcelWriter('added_new_items.xlsx', engine='xlsxwriter') as writer:
+                with pd.ExcelWriter('output/added_new_items.xlsx', engine='xlsxwriter') as writer:
                     duty_rate_df.to_excel(writer, index=False, sheet_name='CCTV')
                     
                     # Add new descriptions to a new sheet with required columns
@@ -251,25 +252,10 @@ def create_checking_list():
                             worksheet2.set_column(i, i, 40)  # Wider column for item name
                         else:
                             worksheet2.set_column(i, i, 15)
-                
-                print("\n新增货描已添加至 added_new_items.xlsx")
-                
-                # # Still create the original added_new_items.xlsx file
-                # with pd.ExcelWriter('added_new_items.xlsx', engine='xlsxwriter') as writer:
-                #     new_descriptions_df.to_excel(writer, index=False)
-                #     # Get the xlsxwriter workbook and worksheet objects
-                #     workbook = writer.book
-                #     worksheet = writer.sheets['Sheet1']
-                #     # Set a fixed width of 20 for all columns
-                #     for i, col in enumerate(new_descriptions_df.columns):
-                #         if col == 'new item' or col == 'Item Name':
-                #             worksheet.set_column(i, i, 100)
-                #         else:
-                #             worksheet.set_column(i, i, 20)
-                # print("\n新增货描已保存至 added_new_items.xlsx")
             
-            new_df.to_excel('processed_invoices.xlsx', index=False)
-            print("\nSuccessfully created processed_invoices.xlsx")
+            # Update path for processed invoices
+            new_df.to_excel('output/processed_invoices.xlsx', index=False)
+            print("\nSuccessfully created output/processed_invoices.xlsx")
             return True
         except PermissionError:
             print("Error: The file is currently open. Please close it and try again.")
@@ -279,7 +265,8 @@ def create_checking_list():
             return False
 
     except Exception as e:
-        print(f"An error occurred: {str(e)}")
+        print(f"\n❌ 创建检查清单失败: {str(e)}")
+        print(f"错误发生在 create_checking_list 函数的第 {e.__traceback__.tb_lineno} 行")
         return False
 
 if __name__ == "__main__":

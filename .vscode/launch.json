@@ -1,8 +1,18 @@
 {
     "version": "0.2.0",
     "configurations": [
-
-                {
+        // {
+        //     "name": "Python: Current File",
+        //     "type": "python",
+        //     "request": "launch",
+        //     "program": "${file}",
+        //     "args": [],
+        //     "env": {
+        //         "PYDEVD_DISABLE_FILE_VALIDATION": "1"
+        //     },
+        //     "args": ["-Xfrozen_modules=off"]
+        // },
+        {
             "name": "Python: Excel Comparison",
             "type": "python",
             "request": "launch",
@@ -10,11 +20,18 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "cwd": "${workspaceFolder}",
-            "args": ["processed_invoices.xlsx", "processed_checklist.xlsx", "processed_report.xlsx"],
+            "args": [
+                "${workspaceFolder}/input/processing_invoices.xlsx",
+                "${workspaceFolder}/input/processing_checklist.xlsx",
+                "${workspaceFolder}/input/duty_rate.xlsx",
+                "${workspaceFolder}/output/processed_invoices.xlsx",
+                "${workspaceFolder}/output/processed_checklist.xlsx",
+                "${workspaceFolder}/output/processed_report.xlsx"
+            ],
             "env": {
                 "PYTHONPATH": "${workspaceFolder}"
+            }
         },
-
         // {
         //     "name": "Python: Excel Comparison",
         //     "type": "python",
@@ -23,14 +40,15 @@
         //     "console": "integratedTerminal",
         //     "justMyCode": true,
         //     "cwd": "${workspaceFolder}",
-        //     "args": ["processed_invoices.xlsx", "processed_checklist.xlsx", "processed_report.xlsx"],
+        //     "args": ["output/processed_invoices.xlsx", "output/processed_checklist.xlsx", "output/processed_report.xlsx"],
         //     "env": {
         //         "PYTHONPATH": "${workspaceFolder}"
+        //     }
         // },
 
 
         //     {
-        //         "name": "Python: Excel clean_check",
+        //         "name": "Python: Excel processing_checklist",
         //         "type": "python",
         //         "request": "launch",
         //         "program": "${workspaceFolder}/processing_checklist.py",
@@ -46,7 +64,7 @@
 
 
         // {
-        //     "name": "Python: Excel Checkinglis",
+        //     "name": "Python: Excel processing_invoices",
         //     "type": "python",
         //     "request": "launch",
         //     "program": "${workspaceFolder}/processing_invoices.py",
