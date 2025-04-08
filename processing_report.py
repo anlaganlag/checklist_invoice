@@ -61,6 +61,20 @@ def compare_excels(file1, file2, output_file):
 
         if diff_data:
             diff_df = pd.DataFrame(diff_data)
+            
+            # 替换列名：Duty -> BCD, Welfare -> SWS
+            column_mapping = {}
+            for col in diff_df.columns:
+                if col == 'Duty':
+                    column_mapping[col] = 'BCD'
+                elif col == 'Welfare':
+                    column_mapping[col] = 'SWS'
+                else:
+                    column_mapping[col] = col
+            
+            # 重命名列
+            diff_df = diff_df.rename(columns=column_mapping)
+            
             # Create Excel writer with xlsxwriter engine
             with pd.ExcelWriter(output_file, engine='xlsxwriter') as writer:
                 diff_df.to_excel(writer, index=False, sheet_name="checkList和进口发票比对")
