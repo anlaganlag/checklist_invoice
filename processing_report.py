@@ -130,9 +130,15 @@ if __name__ == "__main__":
         # Update path for opening file
         output_path = os.path.abspath(input_files['output_report'])
         if os.path.exists(output_path):
-            os.startfile(output_path)
+            if sys.platform.startswith('win'):
+                os.startfile(output_path)
+            else:
+                print(f"\n文件已生成：{output_path}")
+                print("注意：非Windows系统不支持自动打开文件")
     except Exception as e:
         print(f"\n❌ 打开结果文件失败: {str(e)}")
         print(f"错误发生在第 {e.__traceback__.tb_lineno} 行")
-        input("按回车键退出程序...")  # 防止程序闪退
+    finally:
+        print("\n处理完成！")
+        input("按回车键退出程序...")  # 无论是否出错都等待用户确认后退出
     
