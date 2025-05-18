@@ -30,7 +30,14 @@ echo 安装依赖...
 pip install -r requirements.txt
 
 echo 环境设置完成！
-echo 要激活此环境，请运行: .venv\Scripts\activate.bat
-echo 要运行项目，请在激活环境后执行Python脚本
+
+REM 创建启动脚本
+echo @echo off > run_app.bat
+echo call .venv\Scripts\activate.bat >> run_app.bat
+echo streamlit run app.py >> run_app.bat
+echo pause >> run_app.bat
+
+echo 创建了启动脚本: run_app.bat
+echo 要启动应用，请双击运行 run_app.bat
 
 pause 
