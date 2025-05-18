@@ -641,8 +641,19 @@ if process_button:
                     if not diff_report.empty:
                         diff_report.to_excel(processed_report_path, index=False)
                         logging.info(f"Saved diff report to {processed_report_path}")
+                        
+                        # 创建用于自动下载的BytesIO对象
+                        report_buffer = BytesIO()
+                        with pd.ExcelWriter(report_buffer, engine='xlsxwriter') as writer:
+                            diff_report.to_excel(writer, index=False)
+                        report_buffer.seek(0)
+                        
+                        # 设置会话状态变量，用于自动下载
+                        st.session_state.auto_download_report = report_buffer
+                        st.session_state.show_download_button = True
                     else:
                         logging.info("No differences found, skipping diff report creation")
+                        st.session_state.show_download_button = False
                 except Exception as e:
                     logging.error(f"Error saving output files: {str(e)}")
                     logging.exception("Exception details:")
@@ -823,4 +834,17 @@ with tab5:
 
 # Footer
 st.markdown("---")
+
+# 自动下载比对报告
+if process_button and 'show_download_button' in st.session_state and st.session_state.show_download_button:
+    if 'auto_download_report' in st.session_state:
+        st.success("处理完成！比对报告已准备好下载")
+        st.download_button(
+            label="点击下载比对报告",
+            data=st.session_state.auto_download_report,
+            file_name="比对报告.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            key="auto_download_report_button"
+        )
+
 st.markdown("© 2023 发票核对系统 | 版本 1.1")

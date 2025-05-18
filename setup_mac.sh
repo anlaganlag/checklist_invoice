@@ -6,8 +6,8 @@ echo "==================================================="
 echo
 
 # 设置项目路径（请根据实际情况修改）
-PROJECT_PATH="/Users/username/Documents/invoice_checkList"
-REPO_URL="https://github.com/yourusername/invoice_checkList.git"
+PROJECT_PATH="/Users/ciiber/Documents/code/checklist_invoice"
+REPO_URL="https://github.com/anlaganlag/checklist_invoice.git"
 
 # 创建日志目录
 LOG_DIR="$PROJECT_PATH/logs"
@@ -52,16 +52,17 @@ echo "[$(date)] 切换到项目目录: $(pwd)" >> "$LOG_FILE"
 if [ -d "$PROJECT_PATH/.git" ]; then
     echo "更新现有 Git 仓库..."
     echo "[$(date)] 更新现有 Git 仓库" >> "$LOG_FILE"
-    if ! git pull >> "$LOG_FILE" 2>&1; then
+    # 使用绝对路径执行git pull
+    if ! /usr/bin/git -C "$PROJECT_PATH" pull >> "$LOG_FILE" 2>&1; then
         echo "[警告] Git pull 失败，尝试重置仓库..."
         echo "[$(date)] [警告] Git pull 失败，尝试重置仓库" >> "$LOG_FILE"
-        git fetch --all >> "$LOG_FILE" 2>&1
-        git reset --hard origin/main >> "$LOG_FILE" 2>&1
+        /usr/bin/git -C "$PROJECT_PATH" fetch --all >> "$LOG_FILE" 2>&1
+        /usr/bin/git -C "$PROJECT_PATH" reset --hard origin/main >> "$LOG_FILE" 2>&1
     fi
 else
     echo "克隆 Git 仓库..."
     echo "[$(date)] 克隆 Git 仓库: $REPO_URL" >> "$LOG_FILE"
-    if ! git clone "$REPO_URL" . >> "$LOG_FILE" 2>&1; then
+    if ! /usr/bin/git clone "$REPO_URL" . >> "$LOG_FILE" 2>&1; then
         echo "[错误] Git 克隆失败"
         echo "[$(date)] [错误] Git 克隆失败" >> "$LOG_FILE"
         exit 1
@@ -129,7 +130,18 @@ cat > "$PROJECT_PATH/start_app.sh" << EOF
 #!/bin/bash
 cd "$PROJECT_PATH"
 source "$PROJECT_PATH/.venv/bin/activate"
-streamlit run "$PROJECT_PATH/streamlit_app.py"
+
+# 检查8503端口是否被占用
+PORT=8503
+PID=\$(lsof -ti:\$PORT)
+if [ -n "\$PID" ]; then
+    echo "端口 \$PORT 被进程 \$PID 占用，正在终止该进程..."
+    kill -9 \$PID
+    echo "进程已终止"
+fi
+
+# 固定使用8503端口启动应用
+streamlit run "$PROJECT_PATH/streamlit_app.py" --server.port=\$PORT
 EOF
 chmod +x "$PROJECT_PATH/start_app.sh"
 echo "[$(date)] 创建启动脚本: $PROJECT_PATH/start_app.sh" >> "$LOG_FILE"
@@ -143,14 +155,11 @@ echo "要启动应用程序，请运行:"
 echo "$PROJECT_PATH/start_app.sh"
 echo
 echo "或者直接运行以下命令:"
-echo "cd $PROJECT_PATH && source .venv/bin/activate && streamlit run streamlit_app.py"
+echo "cd $PROJECT_PATH && source .venv/bin/activate && streamlit run streamlit_app.py --server.port=8503"
 echo
 echo "配置日志已保存到: $LOG_FILE"
 echo
 
-# 询问是否立即启动应用
-read -p "是否立即启动应用程序？(y/n): " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    "$PROJECT_PATH/start_app.sh"
-fi
+
+"$PROJECT_PATH/start_app.sh"
+
