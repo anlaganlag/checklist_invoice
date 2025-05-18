@@ -49,7 +49,7 @@ def process_invoice_file(file_path, duty_rates):
         print("Available sheets:", excel_file.sheet_names)
         
         # Store original sheet names for accessing sheets
-        original_sheet_names = excel_file.sheet_names[1:]  # Skip the first sheet
+        original_sheet_names = [sheet for sheet in excel_file.sheet_names[1:] if not sheet.startswith('_') or not sheet.startswith('Sheet')]  # Skip first sheet and hidden sheets
         
         # Process sheet names for display and ID creation (remove CI- prefix)
         processed_sheet_names = [name.replace('CI-', '') if name.startswith('CI-') else name 
