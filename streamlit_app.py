@@ -458,8 +458,6 @@ def compare_excels(df1, df2, price_tolerance_pct=1.1):
                             tolerance = row1[col] * (price_tolerance_pct / 100)  # 转换为小数
                             if abs(row1[col] - row2[col]) > tolerance:
                                 diff_cols.append(col)
-                                # 创建price_diff格式
-                                price_diff = f"{row2[col]} -> {row1[col]}"
                     # 其他列使用精确比对
                     elif row1[col] != row2[col]:
                         diff_cols.append(col)
@@ -468,11 +466,7 @@ def compare_excels(df1, df2, price_tolerance_pct=1.1):
                     diff_count += 1
                     diff_info = {'ID': id1}
                     for col in diff_cols:
-                        if col == 'Price':
-                            diff_info['price_diff'] = price_diff
-                        else:
-                            diff_info[f'{col}_file1'] = row1[col]
-                            diff_info[f'{col}_file2'] = row2[col]
+                        diff_info[f'{col}'] = f'{row2[col]} -> {row1[col]}'
                     diff_data.append(diff_info)
 
         logging.info(f"Comparison complete. Found {match_count} matching IDs between files")
@@ -480,10 +474,20 @@ def compare_excels(df1, df2, price_tolerance_pct=1.1):
 
         if diff_data:
             diff_df = pd.DataFrame(diff_data)
-            # 重新排列列，确保price_diff在前面
-            if 'price_diff' in diff_df.columns:
-                cols = ['ID', 'price_diff'] + [col for col in diff_df.columns if col not in ['ID', 'price_diff']]
-                diff_df = diff_df[cols]
+
+            # 替换列名：Duty -> BCD, Welfare -> SWS
+            column_mapping = {}
+            for col in diff_df.columns:
+                if col == 'Duty':
+                    column_mapping[col] = 'BCD'
+                elif col == 'Welfare':
+                    column_mapping[col] = 'SWS'
+                else:
+                    column_mapping[col] = col
+
+            # 重命名列
+            diff_df = diff_df.rename(columns=column_mapping)
+
             logging.info(f"Created difference DataFrame with shape: {diff_df.shape}")
             return diff_df
         else:
@@ -641,13 +645,13 @@ if process_button:
                     if not diff_report.empty:
                         diff_report.to_excel(processed_report_path, index=False)
                         logging.info(f"Saved diff report to {processed_report_path}")
-                        
+
                         # 创建用于自动下载的BytesIO对象
                         report_buffer = BytesIO()
                         with pd.ExcelWriter(report_buffer, engine='xlsxwriter') as writer:
                             diff_report.to_excel(writer, index=False)
                         report_buffer.seek(0)
-                        
+
                         # 设置会话状态变量，用于自动下载
                         st.session_state.auto_download_report = report_buffer
                         st.session_state.show_download_button = True
