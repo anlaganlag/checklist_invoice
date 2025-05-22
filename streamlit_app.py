@@ -260,12 +260,15 @@ def process_invoice_file(file_path, duty_rates):
                             new_items_count += 1
                             # Add unmatched items to new_descriptions_df
                             new_descriptions_df = pd.concat([new_descriptions_df, pd.DataFrame({
-                                '发票及项号': [row['ID']],
+                                '发票及项号': [str(row['ID'])],
                                 'Item Name': [itemName],
                                 'Final BCD': [''],
                                 'Final SWS': [''],
                                 'Final IGST': [''],
                                 'HSN1': [''],
+                                # 添加兼容旧版本的列，确保为字符串类型
+                                'Duty': [''],
+                                'Welfare': ['']
                             })], ignore_index=True)
 
             logging.info(f"Found {new_items_count} new items in sheet {original_sheet_name}")
@@ -288,10 +291,25 @@ def process_invoice_file(file_path, duty_rates):
 
         # 在return前添加类型转换
         # 确保特定列为字符串类型，解决Arrow序列化问题
-        columns_to_convert = ['Item#', 'P/N', 'ID', 'Qty', 'Price', 'HSN', 'BCD', 'SWS', 'IGST']
+        columns_to_convert = ['Item#', 'P/N', 'ID', 'Qty', 'Price', 'HSN', 'BCD', 'SWS', 'IGST', 'Item_Name']
         for col in columns_to_convert:
             if col in all_invoices_df.columns:
                 all_invoices_df[col] = all_invoices_df[col].astype(str)
+                
+        # 确保new_descriptions_df中的所有列都是字符串类型，特别是Duty列
+        if not new_descriptions_df.empty:
+            # 记录列名，帮助调试
+            logging.info(f"new_descriptions_df columns: {new_descriptions_df.columns.tolist()}")
+            
+            # 除了'Item Name'外，将所有列转换为字符串
+            for col in new_descriptions_df.columns:
+                if col != 'Item Name':  # 保留Item Name列的原始类型
+                    new_descriptions_df[col] = new_descriptions_df[col].astype(str)
+                    
+            # 特别处理可能存在的Duty和Welfare列（旧名称）
+            for col in ['Duty', 'Welfare', 'Final BCD', 'Final SWS', 'Final IGST', 'HSN1']:
+                if col in new_descriptions_df.columns:
+                    new_descriptions_df[col] = new_descriptions_df[col].astype(str)
 
         return all_invoices_df, new_descriptions_df
     except Exception as e:
@@ -359,19 +377,27 @@ def process_checklist(file_path):
                         desc = desc.replace('-', '')
                         desc = ''.join(char for char in desc if char.isalnum() or char in '.()').upper()
 
-                    result_rows.append({
+                    # 创建一个安全的字典，检查列是否存在
+                    item_dict = {
                         'Item#': row['Item#'],
                         'ID': item_id,
-                        'P/N': row['P/N'],
+                        'P/N': row.get('P/N', ''),
                         'Desc': desc,
-                        'Qty': row['Qty'],
-                        'Price': row['Price'],
+                        'Qty': row.get('Qty', ''),
+                        'Price': row.get('Price', ''),
                         'Item_Name': item_name,
-                        'HSN': int(row['HSN']) if str(row['HSN']).strip().isdigit() else row['HSN'],
-                        'BCD': row['BCD'],
-                        'SWS': row['SWS'],
-                        'IGST': row['IGST'],
-                    })
+                        'HSN': int(row.get('HSN', 0)) if str(row.get('HSN', '')).strip().isdigit() else row.get('HSN', ''),
+                        'BCD': row.get('BCD', ''),
+                        'SWS': row.get('SWS', ''),
+                        'IGST': row.get('IGST', ''),
+                    }
+                    
+                    # 确保所有值都是字符串类型
+                    for key in ['Item#', 'P/N', 'ID', 'Qty', 'Price', 'HSN', 'BCD', 'SWS', 'IGST']:
+                        if key in item_dict and item_dict[key] is not None:
+                            item_dict[key] = str(item_dict[key])
+                            
+                    result_rows.append(item_dict)
 
         # 创建结果DataFrame
         result_df = pd.DataFrame(result_rows)
@@ -492,8 +518,19 @@ def compare_excels(df1, df2, price_tolerance_pct=1.1):
                     # 对Price列使用用户设置的误差范围
                     if col == 'Price':
                         if pd.notna(row1[col]) and pd.notna(row2[col]):
-                            tolerance = row1[col] * (price_tolerance_pct / 100)  # 转换为小数
-                            if abs(row1[col] - row2[col]) > tolerance:
+                            try:
+                                # 首先尝试将值转换为float类型
+                                price1 = float(row1[col]) if isinstance(row1[col], str) else row1[col]
+                                price2 = float(row2[col]) if isinstance(row2[col], str) else row2[col]
+                                
+                                # 计算容差
+                                tolerance = price1 * (price_tolerance_pct / 100)  # 转换为小数
+                                if abs(price1 - price2) > tolerance:
+                                    diff_cols.append(col)
+                            except (ValueError, TypeError):
+                                # 如果转换失败，记录错误并跳过比较
+                                logging.warning(f"无法比较价格: {row1[col]} vs {row2[col]}，跳过此比较")
+                                # 保险起见，标记为有差异
                                 diff_cols.append(col)
                     # 对HSN列特殊处理，忽略浮点数和整数的差异（如85423900.0和85423900）
                     elif col == 'HSN':
@@ -562,8 +599,14 @@ def compare_excels(df1, df2, price_tolerance_pct=1.1):
 
             # 添加类型转换，解决Arrow序列化问题
             for col in diff_df.columns:
-                if col not in ['ID', 'Item Name']:  # 这些列可能保持原样
-                    diff_df[col] = diff_df[col].astype(str)
+                # 所有列都转为字符串，包括之前排除的Item Name
+                diff_df[col] = diff_df[col].astype(str)
+            
+            # 特别处理可能存在的Duty和Welfare列（旧名称）
+            for old_col in ['Duty', 'Welfare']:
+                if old_col in diff_df.columns:
+                    diff_df[old_col] = diff_df[old_col].astype(str)
+                    logging.info(f"转换了差异报告中的旧列名 {old_col} 为字符串类型")
 
             return diff_df
         else:
@@ -823,10 +866,16 @@ with tab3:
                 processed_invoices_df = pd.read_excel(processed_invoices_path)
                 
                 # 添加类型转换，解决Arrow序列化问题
-                columns_to_convert = ['Item#', 'P/N', 'ID', 'Qty', 'Price', 'HSN', 'BCD', 'SWS', 'IGST']
+                columns_to_convert = ['Item#', 'P/N', 'ID', 'Qty', 'Price', 'HSN', 'BCD', 'SWS', 'IGST', 'Item_Name']
                 for col in columns_to_convert:
                     if col in processed_invoices_df.columns:
                         processed_invoices_df[col] = processed_invoices_df[col].astype(str)
+                
+                # 特别处理可能存在的Duty和Welfare列（旧名称）
+                for old_col in ['Duty', 'Welfare']:
+                    if old_col in processed_invoices_df.columns:
+                        processed_invoices_df[old_col] = processed_invoices_df[old_col].astype(str)
+                        logging.info(f"转换了处理后发票中的旧列名 {old_col} 为字符串类型")
                 
                 st.dataframe(processed_invoices_df, use_container_width=True)
 
@@ -850,10 +899,16 @@ with tab3:
                 processed_checklist_df = pd.read_excel(processed_checklist_path)
                 
                 # 添加类型转换，解决Arrow序列化问题
-                columns_to_convert = ['Item#', 'P/N', 'ID', 'Qty', 'Price', 'HSN', 'BCD', 'SWS', 'IGST']
+                columns_to_convert = ['Item#', 'P/N', 'ID', 'Qty', 'Price', 'HSN', 'BCD', 'SWS', 'IGST', 'Item_Name']
                 for col in columns_to_convert:
                     if col in processed_checklist_df.columns:
                         processed_checklist_df[col] = processed_checklist_df[col].astype(str)
+                
+                # 特别处理可能存在的Duty和Welfare列（旧名称）
+                for old_col in ['Duty', 'Welfare']:
+                    if old_col in processed_checklist_df.columns:
+                        processed_checklist_df[old_col] = processed_checklist_df[old_col].astype(str)
+                        logging.info(f"转换了处理后核对清单中的旧列名 {old_col} 为字符串类型")
                 
                 st.dataframe(processed_checklist_df, use_container_width=True)
 
@@ -880,10 +935,16 @@ with tab3:
                 if 'newDutyRate' in sheet_names:
                     new_items_df = pd.read_excel(new_items_path, sheet_name='newDutyRate')
                     if not new_items_df.empty:
-                        # 添加类型转换
+                        # 添加类型转换 - 包括Item Name也转为字符串
                         for col in new_items_df.columns:
-                            if col != 'Item Name' and col in new_items_df.columns:  # 保留Item Name列的原始类型
-                                new_items_df[col] = new_items_df[col].astype(str)
+                            # 所有列都转为字符串，不再特殊处理Item Name
+                            new_items_df[col] = new_items_df[col].astype(str)
+                        
+                        # 特别处理可能存在的Duty和Welfare列（旧名称）
+                        for old_col, new_col in [('Duty', 'BCD'), ('Welfare', 'SWS')]:
+                            if old_col in new_items_df.columns:
+                                new_items_df[old_col] = new_items_df[old_col].astype(str)
+                                logging.info(f"转换了旧列名 {old_col} 为字符串类型")
                                 
                         st.dataframe(new_items_df, use_container_width=True)
 
