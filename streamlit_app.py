@@ -334,7 +334,7 @@ def process_checklist(file_path):
         item_count = 0
 
         # 遍历每一行
-        for index, row in df.iterrows():
+        for _, row in df.iterrows():  # 使用 _ 表示不使用的索引变量
             # 检查是否是发票行
             pn = str(row['P/N'])
             if 'Invoice:' in str(pn):
@@ -554,64 +554,74 @@ def compare_excels(df1, df2, price_tolerance_pct=1.1):
                     # 只创建包含ID和有差异列的信息
                     diff_info = {'ID': id1}
 
-                    # 只添加有差异的列
-                    for col in diff_cols:
-                        # 对数字列特殊处理显示格式，去除小数点后的零
-                        if col in ['HSN', 'BCD', 'SWS', 'IGST', 'Qty', 'Price']:
-                            # 处理数值，去除小数点后的零
-                            val1 = str(row1[col]).rstrip('0').rstrip('.') if '.' in str(row1[col]) else str(row1[col])
-                            val2 = str(row2[col]).rstrip('0').rstrip('.') if '.' in str(row2[col]) else str(row2[col])
+                    # 记录差异列
+                    logging.info(f"ID {id1} 的差异列: {diff_cols}")
 
-                            # 跳过相同值的显示 (例如 10 -> 10)
-                            if val1 == val2:
-                                continue
+                    # 按照期望的列顺序处理差异列
+                    expected_columns = ['ID', 'P/N', 'Desc', 'HSN', 'BCD', 'SWS', 'IGST', 'Qty', 'Price']
 
-                            # 跳过NaN值或空值 - 更严格的检查
-                            if (val1.lower() == 'nan' or val2.lower() == 'nan' or
-                                val1 == '' or val2 == '' or
-                                val1.lower() == 'none' or val2.lower() == 'none' or
-                                val1.strip() == '' or val2.strip() == ''):
-                                continue
+                    # 首先处理ID列
+                    diff_info['ID'] = id1
 
-                            # 跳过相同值的显示 (例如 nan -> nan)
-                            if val1.lower() == val2.lower():
-                                continue
+                    # 然后按照期望的顺序处理其他列
+                    for col in expected_columns:
+                        if col != 'ID' and col in diff_cols:
+                            # 对数字列特殊处理显示格式，去除小数点后的零
+                            if col in ['HSN', 'BCD', 'SWS', 'IGST', 'Qty', 'Price']:
+                                # 处理数值，去除小数点后的零
+                                val1 = str(row1[col]).rstrip('0').rstrip('.') if '.' in str(row1[col]) else str(row1[col])
+                                val2 = str(row2[col]).rstrip('0').rstrip('.') if '.' in str(row2[col]) else str(row2[col])
 
-                            # 确保不是"nan -> 值"或"值 -> nan"的情况
-                            display_val1 = '' if val1.lower() in ['nan', 'none', ''] else val1
-                            display_val2 = '' if val2.lower() in ['nan', 'none', ''] else val2
+                                # 跳过相同值的显示 (例如 10 -> 10)
+                                if val1 == val2:
+                                    continue
 
-                            # 只有当两个值都不是空/nan时才添加
-                            if display_val1 and display_val2:
-                                diff_info[f'{col}'] = f'{display_val2} -> {display_val1}'
-                        else:
-                            # 跳过相同值的显示
-                            if row1[col] == row2[col]:
-                                continue
+                                # 跳过NaN值或空值 - 更严格的检查
+                                if (val1.lower() == 'nan' or val2.lower() == 'nan' or
+                                    val1 == '' or val2 == '' or
+                                    val1.lower() == 'none' or val2.lower() == 'none' or
+                                    val1.strip() == '' or val2.strip() == ''):
+                                    continue
 
-                            # 跳过NaN值或空值 - 更严格的检查
-                            if pd.isna(row1[col]) or pd.isna(row2[col]) or str(row1[col]).strip() == '' or str(row2[col]).strip() == '':
-                                continue
+                                # 跳过相同值的显示 (例如 nan -> nan)
+                                if val1.lower() == val2.lower():
+                                    continue
 
-                            # 将值转换为字符串并检查是否为'nan'或'none'
-                            val1 = str(row1[col]).lower()
-                            val2 = str(row2[col]).lower()
-                            if (val1 == 'nan' or val2 == 'nan' or
-                                val1 == 'none' or val2 == 'none' or
-                                val1.strip() == '' or val2.strip() == ''):
-                                continue
+                                # 确保不是"nan -> 值"或"值 -> nan"的情况
+                                display_val1 = '' if val1.lower() in ['nan', 'none', ''] else val1
+                                display_val2 = '' if val2.lower() in ['nan', 'none', ''] else val2
 
-                            # 跳过相同值的显示 (例如 nan -> nan)
-                            if val1 == val2:
-                                continue
+                                # 只有当两个值都不是空/nan时才添加
+                                if display_val1 and display_val2:
+                                    diff_info[f'{col}'] = f'{display_val2} -> {display_val1}'
+                            else:
+                                # 跳过相同值的显示
+                                if row1[col] == row2[col]:
+                                    continue
 
-                            # 确保不是"nan -> 值"或"值 -> nan"的情况
-                            display_val1 = '' if val1 in ['nan', 'none', ''] else str(row1[col])
-                            display_val2 = '' if val2 in ['nan', 'none', ''] else str(row2[col])
+                                # 跳过NaN值或空值 - 更严格的检查
+                                if pd.isna(row1[col]) or pd.isna(row2[col]) or str(row1[col]).strip() == '' or str(row2[col]).strip() == '':
+                                    continue
 
-                            # 只有当两个值都不是空/nan时才添加
-                            if display_val1 and display_val2:
-                                diff_info[f'{col}'] = f'{display_val2} -> {display_val1}'
+                                # 将值转换为字符串并检查是否为'nan'或'none'
+                                val1 = str(row1[col]).lower()
+                                val2 = str(row2[col]).lower()
+                                if (val1 == 'nan' or val2 == 'nan' or
+                                    val1 == 'none' or val2 == 'none' or
+                                    val1.strip() == '' or val2.strip() == ''):
+                                    continue
+
+                                # 跳过相同值的显示 (例如 nan -> nan)
+                                if val1 == val2:
+                                    continue
+
+                                # 确保不是"nan -> 值"或"值 -> nan"的情况
+                                display_val1 = '' if val1 in ['nan', 'none', ''] else str(row1[col])
+                                display_val2 = '' if val2 in ['nan', 'none', ''] else str(row2[col])
+
+                                # 只有当两个值都不是空/nan时才添加
+                                if display_val1 and display_val2:
+                                    diff_info[f'{col}'] = f'{display_val2} -> {display_val1}'
 
                     # 只有当diff_info中有除了ID以外的其他列时才添加到diff_data
                     if len(diff_info) > 1:
@@ -625,8 +635,8 @@ def compare_excels(df1, df2, price_tolerance_pct=1.1):
 
             # 列名已经是 BCD 和 SWS，不需要再进行映射
 
-            # 定义期望的列顺序 (移除Item#列)
-            expected_columns = ['ID', 'Desc', 'HSN', 'BCD', 'SWS', 'IGST', 'Qty', 'Price', 'P/N']
+            # 定义期望的列顺序 (按照指定顺序)
+            expected_columns = ['ID', 'P/N', 'Desc', 'HSN', 'BCD', 'SWS', 'IGST', 'Qty', 'Price']
 
             # 只保留实际有数据的列
             non_empty_columns = ['ID']  # ID列始终保留
@@ -644,16 +654,17 @@ def compare_excels(df1, df2, price_tolerance_pct=1.1):
                     if has_data:
                         non_empty_columns.append(col)
 
-            # 按照期望的列顺序排序
-            ordered_columns = ['ID']
+            # 严格按照期望的列顺序排序，只包含存在的列
+            ordered_columns = []
             for col in expected_columns:
-                if col != 'ID' and col in non_empty_columns:
+                if col in diff_df.columns and (col == 'ID' or col in non_empty_columns):
                     ordered_columns.append(col)
+                    logging.info(f"添加列到最终报告: {col}")
+                elif col in expected_columns:
+                    logging.info(f"列 {col} 不存在或为空，跳过")
 
-            # 添加其他不在expected_columns中的列
-            for col in non_empty_columns:
-                if col not in ordered_columns and col != 'Item#':  # 确保Item#列不包含在内
-                    ordered_columns.append(col)
+            # 不再添加其他列，确保严格按照指定顺序
+            logging.info(f"最终列顺序: {ordered_columns}")
 
             # 应用新的列顺序
             diff_df = diff_df[ordered_columns]
