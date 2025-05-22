@@ -288,7 +288,7 @@ def process_invoice_file(file_path, duty_rates):
 
         # 在return前添加类型转换
         # 确保特定列为字符串类型，解决Arrow序列化问题
-        columns_to_convert = ['Item#', 'P/N', 'ID']
+        columns_to_convert = ['Item#', 'P/N', 'ID', 'Qty', 'Price', 'HSN', 'BCD', 'SWS', 'IGST']
         for col in columns_to_convert:
             if col in all_invoices_df.columns:
                 all_invoices_df[col] = all_invoices_df[col].astype(str)
@@ -389,7 +389,7 @@ def process_checklist(file_path):
 
         # 在return前添加类型转换
         # 确保特定列为字符串类型，解决Arrow序列化问题
-        columns_to_convert = ['Item#', 'P/N', 'ID']
+        columns_to_convert = ['Item#', 'P/N', 'ID', 'Qty', 'Price', 'HSN', 'BCD', 'SWS', 'IGST']
         for col in columns_to_convert:
             if col in result_df.columns:
                 result_df[col] = result_df[col].astype(str)
@@ -407,9 +407,26 @@ def compare_excels(df1, df2, price_tolerance_pct=1.1):
     logging.info(f"Using price tolerance: {price_tolerance_pct}%")
     logging.info(f"DataFrame 1 (invoices) shape: {df1.shape}")
     logging.info(f"DataFrame 2 (checklist) shape: {df2.shape}")
+    
+    # 记录两个DataFrame的列名，帮助调试
+    logging.info(f"DataFrame 1 columns: {df1.columns.tolist()}")
+    logging.info(f"DataFrame 2 columns: {df2.columns.tolist()}")
 
     try:
-        # Check for null IDs
+        # 检查ID列是否存在
+        if 'ID' not in df1.columns:
+            error_msg = "'ID' column not found in DataFrame 1"
+            logging.error(error_msg)
+            st.error(error_msg)
+            return pd.DataFrame()
+        
+        if 'ID' not in df2.columns:
+            error_msg = "'ID' column not found in DataFrame 2"
+            logging.error(error_msg)
+            st.error(error_msg)
+            return pd.DataFrame()
+        
+        # 检查为null的IDs
         null_ids_df1 = df1['ID'].isna().sum()
         null_ids_df2 = df2['ID'].isna().sum()
         if null_ids_df1 > 0:
@@ -806,7 +823,7 @@ with tab3:
                 processed_invoices_df = pd.read_excel(processed_invoices_path)
                 
                 # 添加类型转换，解决Arrow序列化问题
-                columns_to_convert = ['Item#', 'P/N', 'ID']
+                columns_to_convert = ['Item#', 'P/N', 'ID', 'Qty', 'Price', 'HSN', 'BCD', 'SWS', 'IGST']
                 for col in columns_to_convert:
                     if col in processed_invoices_df.columns:
                         processed_invoices_df[col] = processed_invoices_df[col].astype(str)
@@ -833,7 +850,7 @@ with tab3:
                 processed_checklist_df = pd.read_excel(processed_checklist_path)
                 
                 # 添加类型转换，解决Arrow序列化问题
-                columns_to_convert = ['Item#', 'P/N', 'ID']
+                columns_to_convert = ['Item#', 'P/N', 'ID', 'Qty', 'Price', 'HSN', 'BCD', 'SWS', 'IGST']
                 for col in columns_to_convert:
                     if col in processed_checklist_df.columns:
                         processed_checklist_df[col] = processed_checklist_df[col].astype(str)
