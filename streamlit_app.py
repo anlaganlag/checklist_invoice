@@ -18,7 +18,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler(log_file),
+        logging.FileHandler(log_file, encoding='utf-8'),
         logging.StreamHandler()
     ]
 )
@@ -286,6 +286,13 @@ def process_invoice_file(file_path, duty_rates):
             all_invoices_df = all_invoices_df.drop_duplicates(subset=['ID'], keep='first')
             logging.info(f"Removed duplicates. New DataFrame shape: {all_invoices_df.shape}")
 
+        # 在return前添加类型转换
+        # 确保特定列为字符串类型，解决Arrow序列化问题
+        columns_to_convert = ['Item#', 'P/N', 'ID']
+        for col in columns_to_convert:
+            if col in all_invoices_df.columns:
+                all_invoices_df[col] = all_invoices_df[col].astype(str)
+
         return all_invoices_df, new_descriptions_df
     except Exception as e:
         error_msg = f"处理发票文件失败: {str(e)}"
@@ -379,6 +386,13 @@ def process_checklist(file_path):
             # Remove duplicates
             result_df = result_df.drop_duplicates(subset=['ID'], keep='first')
             logging.info(f"Removed duplicates. New DataFrame shape: {result_df.shape}")
+
+        # 在return前添加类型转换
+        # 确保特定列为字符串类型，解决Arrow序列化问题
+        columns_to_convert = ['Item#', 'P/N', 'ID']
+        for col in columns_to_convert:
+            if col in result_df.columns:
+                result_df[col] = result_df[col].astype(str)
 
         return result_df
     except Exception as e:
@@ -528,6 +542,12 @@ def compare_excels(df1, df2, price_tolerance_pct=1.1):
 
             logging.info(f"Created difference DataFrame with shape: {diff_df.shape}")
             logging.info(f"Columns in final report: {diff_df.columns.tolist()}")
+
+            # 添加类型转换，解决Arrow序列化问题
+            for col in diff_df.columns:
+                if col not in ['ID', 'Item Name']:  # 这些列可能保持原样
+                    diff_df[col] = diff_df[col].astype(str)
+
             return diff_df
         else:
             logging.info("No differences found between files")
@@ -674,8 +694,6 @@ if process_button:
                 processed_report_path = os.path.join("output", "processed_report.xlsx")
 
                 try:
-
-
                     # Save the diff report if it's not empty
                     if not diff_report.empty:
                         # 使用xlsxwriter引擎保存，以便设置列宽
@@ -687,7 +705,6 @@ if process_button:
 
                             # 设置列宽 - 除了DESC字段外的所有列都宽一倍
                             for i, col in enumerate(diff_report.columns):
-
                                 worksheet.set_column(i, i, 22)
 
                         logging.info(f"Saved diff report to {processed_report_path} with custom column widths")
@@ -702,7 +719,6 @@ if process_button:
 
                             # 设置列宽 - 除了DESC字段外的所有列都宽一倍
                             for i, col in enumerate(diff_report.columns):
-
                                 worksheet.set_column(i, i, 22)
 
                         report_buffer.seek(0)
@@ -788,6 +804,13 @@ with tab3:
         if os.path.exists(processed_invoices_path):
             try:
                 processed_invoices_df = pd.read_excel(processed_invoices_path)
+                
+                # 添加类型转换，解决Arrow序列化问题
+                columns_to_convert = ['Item#', 'P/N', 'ID']
+                for col in columns_to_convert:
+                    if col in processed_invoices_df.columns:
+                        processed_invoices_df[col] = processed_invoices_df[col].astype(str)
+                
                 st.dataframe(processed_invoices_df, use_container_width=True)
 
                 # Download button
@@ -808,6 +831,13 @@ with tab3:
         if os.path.exists(processed_checklist_path):
             try:
                 processed_checklist_df = pd.read_excel(processed_checklist_path)
+                
+                # 添加类型转换，解决Arrow序列化问题
+                columns_to_convert = ['Item#', 'P/N', 'ID']
+                for col in columns_to_convert:
+                    if col in processed_checklist_df.columns:
+                        processed_checklist_df[col] = processed_checklist_df[col].astype(str)
+                
                 st.dataframe(processed_checklist_df, use_container_width=True)
 
                 # Download button
@@ -833,6 +863,11 @@ with tab3:
                 if 'newDutyRate' in sheet_names:
                     new_items_df = pd.read_excel(new_items_path, sheet_name='newDutyRate')
                     if not new_items_df.empty:
+                        # 添加类型转换
+                        for col in new_items_df.columns:
+                            if col != 'Item Name' and col in new_items_df.columns:  # 保留Item Name列的原始类型
+                                new_items_df[col] = new_items_df[col].astype(str)
+                                
                         st.dataframe(new_items_df, use_container_width=True)
 
                         # Download button
@@ -860,6 +895,12 @@ with tab4:
     if os.path.exists(diff_report_path):
         try:
             diff_report_df = pd.read_excel(diff_report_path)
+            
+            # 添加类型转换，解决Arrow序列化问题
+            for col in diff_report_df.columns:
+                if col not in ['ID', 'Item Name']:  # 这些列可能保持原样
+                    diff_report_df[col] = diff_report_df[col].astype(str)
+                    
             if not diff_report_df.empty:
                 st.dataframe(diff_report_df, use_container_width=True)
 
@@ -890,7 +931,7 @@ with tab5:
         log_path = os.path.join(log_dir, selected_log)
 
         try:
-            with open(log_path, 'r') as f:
+            with open(log_path, 'r', encoding='utf-8') as f:
                 log_content = f.read()
 
             # Add filter options

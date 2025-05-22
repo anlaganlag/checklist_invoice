@@ -1,7 +1,35 @@
 import pandas as pd
 import sys
 import os
+import subprocess # Add subprocess for cross-platform open
 
+# Helper function for cross-platform file opening
+def open_file(file_path):
+    """
+    Cross-platform function to open a file, supports Windows, macOS, and Linux.
+    """
+    try:
+        abs_path = os.path.abspath(file_path)
+        if not os.path.exists(abs_path):
+            print(f"\n❌ Error: File not found at {abs_path}")
+            return False
+        
+        if sys.platform.startswith('win'):
+            os.startfile(abs_path)
+        elif sys.platform.startswith('darwin'):  # macOS
+            subprocess.run(['open', abs_path], check=True)
+        else:  # Linux and other Unix-like
+            subprocess.run(['xdg-open', abs_path], check=True)
+        
+        print(f"\nSuccessfully opened file: {abs_path}")
+        return True
+    except FileNotFoundError:
+        print(f"\n❌ Error: File not found at {abs_path}. Cannot open.")
+    except subprocess.CalledProcessError as e:
+        print(f"\n❌ Error opening file with system's default application: {e}")
+    except Exception as e:
+        print(f"\n❌ An unexpected error occurred while trying to open the file: {str(e)}")
+    return False
 
 def compare_excels(file1, file2, output_file):
     try:
@@ -160,26 +188,15 @@ if __name__ == "__main__":
                  input_files['output_report'])
 
     try:
-        # Update path for opening file
-        output_path = os.path.abspath(input_files['output_report'])
-        if os.path.exists(output_path):
-            try:
-                if sys.platform.startswith('win'):
-                    os.startfile(output_path)
-                else:
-                    print(f"\n文件已生成：{output_path}")
-                    print("注意：非Windows系统不支持自动打开文件")
-            except PermissionError:
-                print(f"\n❌ 无法打开文件: {output_path} - 文件可能已被其他程序打开")
-                print("文件已生成，但无法自动打开")
-            except Exception as e:
-                print(f"\n❌ 打开结果文件失败: {str(e)}")
-                print(f"文件已生成，但无法自动打开: {output_path}")
+        # Use the cross-platform open_file function
+        if os.path.exists(input_files['output_report']):
+            open_file(input_files['output_report'])
         else:
-            print(f"\n未找到结果文件: {output_path}")
-    except Exception as e:
+            print(f"\n未找到结果文件: {input_files['output_report']}")
+    except Exception as e: # General exception for open_file failure
         print(f"\n❌ 打开结果文件失败: {str(e)}")
-        print(f"错误发生在第 {e.__traceback__.tb_lineno} 行")
+        if hasattr(e, '__traceback__'):
+             print(f"错误发生在第 {e.__traceback__.tb_lineno} 行")
     finally:
         print("\n处理完成！")
         input("按回车键退出程序...")  # 无论是否出错都等待用户确认后退出
