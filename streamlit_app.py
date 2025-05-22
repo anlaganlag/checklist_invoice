@@ -36,7 +36,7 @@ warnings.filterwarnings('ignore', message='Print area cannot be set to Defined n
 
 # Set page configuration
 st.set_page_config(
-    page_title="发票核对系统",
+    page_title="Checklist核对系统",
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -83,7 +83,7 @@ os.makedirs('input', exist_ok=True)
 os.makedirs('output', exist_ok=True)
 
 # Main header
-st.markdown("<h1 class='main-header'>发票核对系统</h1>", unsafe_allow_html=True)
+st.markdown("<h1 class='main-header'>Checklist核对系统</h1>", unsafe_allow_html=True)
 
 # Sidebar
 with st.sidebar:
@@ -851,4 +851,4 @@ if process_button and 'show_download_button' in st.session_state and st.session_
             key="auto_download_report_button"
         )
 
-st.markdown("© 2023 发票核对系统 | 版本 1.1")
+st.markdown("© 2025 Checklist核对系统 | 版本 1.1")
