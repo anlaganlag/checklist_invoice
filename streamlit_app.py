@@ -458,15 +458,39 @@ def compare_excels(df1, df2, price_tolerance_pct=1.1):
                             tolerance = row1[col] * (price_tolerance_pct / 100)  # 转换为小数
                             if abs(row1[col] - row2[col]) > tolerance:
                                 diff_cols.append(col)
+                    # 对HSN列特殊处理，忽略浮点数和整数的差异（如85423900.0和85423900）
+                    elif col == 'HSN':
+                        if pd.notna(row1[col]) and pd.notna(row2[col]):
+                            # 将两个值转换为字符串并去除小数点后的零
+                            val1 = str(row1[col]).rstrip('0').rstrip('.') if '.' in str(row1[col]) else str(row1[col])
+                            val2 = str(row2[col]).rstrip('0').rstrip('.') if '.' in str(row2[col]) else str(row2[col])
+
+                            # 记录HSN值的比较
+                            if val1 != val2:
+                                logging.info(f"HSN difference found: {row1[col]} vs {row2[col]} (normalized: {val1} vs {val2})")
+                                diff_cols.append(col)
+                            else:
+                                logging.debug(f"HSN values considered equal: {row1[col]} vs {row2[col]} (normalized: {val1} vs {val2})")
                     # 其他列使用精确比对
                     elif row1[col] != row2[col]:
                         diff_cols.append(col)
 
                 if diff_cols:
                     diff_count += 1
+                    # 只创建包含ID和有差异列的信息
                     diff_info = {'ID': id1}
+
+                    # 只添加有差异的列
                     for col in diff_cols:
-                        diff_info[f'{col}'] = f'{row2[col]} -> {row1[col]}'
+                        # 对数字列特殊处理显示格式，去除小数点后的零
+                        if col in ['HSN', 'BCD', 'SWS', 'IGST', 'Qty', 'Price']:
+                            # 处理数值，去除小数点后的零
+                            val1 = str(row1[col]).rstrip('0').rstrip('.') if '.' in str(row1[col]) else str(row1[col])
+                            val2 = str(row2[col]).rstrip('0').rstrip('.') if '.' in str(row2[col]) else str(row2[col])
+                            diff_info[f'{col}'] = f'{val2} -> {val1}'
+                        else:
+                            diff_info[f'{col}'] = f'{row2[col]} -> {row1[col]}'
+
                     diff_data.append(diff_info)
 
         logging.info(f"Comparison complete. Found {match_count} matching IDs between files")
@@ -488,7 +512,27 @@ def compare_excels(df1, df2, price_tolerance_pct=1.1):
             # 重命名列
             diff_df = diff_df.rename(columns=column_mapping)
 
+            # 定义期望的列顺序
+            expected_columns = ['ID', 'Desc', 'HSN', 'BCD', 'SWS', 'IGST', 'Qty', 'Price', 'P/N']
+
+            # 确保所有期望的列都存在，如果不存在则添加空列
+            for col in expected_columns:
+                if col not in diff_df.columns:
+                    diff_df[col] = ''
+
+            # 重新排列列顺序
+            # 首先获取所有列
+            all_columns = list(diff_df.columns)
+            # 移除已经在expected_columns中的列
+            other_columns = [col for col in all_columns if col not in expected_columns]
+            # 按照期望的顺序重新排列列
+            final_columns = expected_columns + other_columns
+
+            # 应用新的列顺序
+            diff_df = diff_df[final_columns]
+
             logging.info(f"Created difference DataFrame with shape: {diff_df.shape}")
+            logging.info(f"Columns in final report: {diff_df.columns.tolist()}")
             return diff_df
         else:
             logging.info("No differences found between files")
