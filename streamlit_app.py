@@ -295,17 +295,17 @@ def process_invoice_file(file_path, duty_rates):
         for col in columns_to_convert:
             if col in all_invoices_df.columns:
                 all_invoices_df[col] = all_invoices_df[col].astype(str)
-                
+
         # 确保new_descriptions_df中的所有列都是字符串类型，特别是Duty列
         if not new_descriptions_df.empty:
             # 记录列名，帮助调试
             logging.info(f"new_descriptions_df columns: {new_descriptions_df.columns.tolist()}")
-            
+
             # 除了'Item Name'外，将所有列转换为字符串
             for col in new_descriptions_df.columns:
                 if col != 'Item Name':  # 保留Item Name列的原始类型
                     new_descriptions_df[col] = new_descriptions_df[col].astype(str)
-                    
+
             # 特别处理可能存在的Duty和Welfare列（旧名称）
             for col in ['Duty', 'Welfare', 'Final BCD', 'Final SWS', 'Final IGST', 'HSN1']:
                 if col in new_descriptions_df.columns:
@@ -391,12 +391,12 @@ def process_checklist(file_path):
                         'SWS': row.get('SWS', ''),
                         'IGST': row.get('IGST', ''),
                     }
-                    
+
                     # 确保所有值都是字符串类型
                     for key in ['Item#', 'P/N', 'ID', 'Qty', 'Price', 'HSN', 'BCD', 'SWS', 'IGST']:
                         if key in item_dict and item_dict[key] is not None:
                             item_dict[key] = str(item_dict[key])
-                            
+
                     result_rows.append(item_dict)
 
         # 创建结果DataFrame
@@ -433,7 +433,7 @@ def compare_excels(df1, df2, price_tolerance_pct=1.1):
     logging.info(f"Using price tolerance: {price_tolerance_pct}%")
     logging.info(f"DataFrame 1 (invoices) shape: {df1.shape}")
     logging.info(f"DataFrame 2 (checklist) shape: {df2.shape}")
-    
+
     # 记录两个DataFrame的列名，帮助调试
     logging.info(f"DataFrame 1 columns: {df1.columns.tolist()}")
     logging.info(f"DataFrame 2 columns: {df2.columns.tolist()}")
@@ -445,13 +445,13 @@ def compare_excels(df1, df2, price_tolerance_pct=1.1):
             logging.error(error_msg)
             st.error(error_msg)
             return pd.DataFrame()
-        
+
         if 'ID' not in df2.columns:
             error_msg = "'ID' column not found in DataFrame 2"
             logging.error(error_msg)
             st.error(error_msg)
             return pd.DataFrame()
-        
+
         # 检查为null的IDs
         null_ids_df1 = df1['ID'].isna().sum()
         null_ids_df2 = df2['ID'].isna().sum()
@@ -511,8 +511,8 @@ def compare_excels(df1, df2, price_tolerance_pct=1.1):
                 row2 = matching_row.iloc[0]
                 diff_cols = []
                 for col in df1.columns[1:]:  # 跳过ID列
-                    # 跳过Item_Name列的比对
-                    if col == 'Item_Name':
+                    # 跳过Item_Name列和Item#列的比对
+                    if col == 'Item_Name' or col == 'Item#':
                         continue
 
                     # 对Price列使用用户设置的误差范围
@@ -522,7 +522,7 @@ def compare_excels(df1, df2, price_tolerance_pct=1.1):
                                 # 首先尝试将值转换为float类型
                                 price1 = float(row1[col]) if isinstance(row1[col], str) else row1[col]
                                 price2 = float(row2[col]) if isinstance(row2[col], str) else row2[col]
-                                
+
                                 # 计算容差
                                 tolerance = price1 * (price_tolerance_pct / 100)  # 转换为小数
                                 if abs(price1 - price2) > tolerance:
@@ -561,11 +561,61 @@ def compare_excels(df1, df2, price_tolerance_pct=1.1):
                             # 处理数值，去除小数点后的零
                             val1 = str(row1[col]).rstrip('0').rstrip('.') if '.' in str(row1[col]) else str(row1[col])
                             val2 = str(row2[col]).rstrip('0').rstrip('.') if '.' in str(row2[col]) else str(row2[col])
-                            diff_info[f'{col}'] = f'{val2} -> {val1}'
-                        else:
-                            diff_info[f'{col}'] = f'{row2[col]} -> {row1[col]}'
 
-                    diff_data.append(diff_info)
+                            # 跳过相同值的显示 (例如 10 -> 10)
+                            if val1 == val2:
+                                continue
+
+                            # 跳过NaN值或空值 - 更严格的检查
+                            if (val1.lower() == 'nan' or val2.lower() == 'nan' or
+                                val1 == '' or val2 == '' or
+                                val1.lower() == 'none' or val2.lower() == 'none' or
+                                val1.strip() == '' or val2.strip() == ''):
+                                continue
+
+                            # 跳过相同值的显示 (例如 nan -> nan)
+                            if val1.lower() == val2.lower():
+                                continue
+
+                            # 确保不是"nan -> 值"或"值 -> nan"的情况
+                            display_val1 = '' if val1.lower() in ['nan', 'none', ''] else val1
+                            display_val2 = '' if val2.lower() in ['nan', 'none', ''] else val2
+
+                            # 只有当两个值都不是空/nan时才添加
+                            if display_val1 and display_val2:
+                                diff_info[f'{col}'] = f'{display_val2} -> {display_val1}'
+                        else:
+                            # 跳过相同值的显示
+                            if row1[col] == row2[col]:
+                                continue
+
+                            # 跳过NaN值或空值 - 更严格的检查
+                            if pd.isna(row1[col]) or pd.isna(row2[col]) or str(row1[col]).strip() == '' or str(row2[col]).strip() == '':
+                                continue
+
+                            # 将值转换为字符串并检查是否为'nan'或'none'
+                            val1 = str(row1[col]).lower()
+                            val2 = str(row2[col]).lower()
+                            if (val1 == 'nan' or val2 == 'nan' or
+                                val1 == 'none' or val2 == 'none' or
+                                val1.strip() == '' or val2.strip() == ''):
+                                continue
+
+                            # 跳过相同值的显示 (例如 nan -> nan)
+                            if val1 == val2:
+                                continue
+
+                            # 确保不是"nan -> 值"或"值 -> nan"的情况
+                            display_val1 = '' if val1 in ['nan', 'none', ''] else str(row1[col])
+                            display_val2 = '' if val2 in ['nan', 'none', ''] else str(row2[col])
+
+                            # 只有当两个值都不是空/nan时才添加
+                            if display_val1 and display_val2:
+                                diff_info[f'{col}'] = f'{display_val2} -> {display_val1}'
+
+                    # 只有当diff_info中有除了ID以外的其他列时才添加到diff_data
+                    if len(diff_info) > 1:
+                        diff_data.append(diff_info)
 
         logging.info(f"Comparison complete. Found {match_count} matching IDs between files")
         logging.info(f"Found {diff_count} differences")
@@ -575,24 +625,38 @@ def compare_excels(df1, df2, price_tolerance_pct=1.1):
 
             # 列名已经是 BCD 和 SWS，不需要再进行映射
 
-            # 定义期望的列顺序
+            # 定义期望的列顺序 (移除Item#列)
             expected_columns = ['ID', 'Desc', 'HSN', 'BCD', 'SWS', 'IGST', 'Qty', 'Price', 'P/N']
 
-            # 确保所有期望的列都存在，如果不存在则添加空列
-            for col in expected_columns:
-                if col not in diff_df.columns:
-                    diff_df[col] = ''
+            # 只保留实际有数据的列
+            non_empty_columns = ['ID']  # ID列始终保留
 
-            # 重新排列列顺序
-            # 首先获取所有列
-            all_columns = list(diff_df.columns)
-            # 移除已经在expected_columns中的列
-            other_columns = [col for col in all_columns if col not in expected_columns]
-            # 按照期望的顺序重新排列列
-            final_columns = expected_columns + other_columns
+            # 检查每一列是否有非空/非nan数据
+            for col in diff_df.columns:
+                if col != 'ID':  # 跳过ID列，因为已经包含
+                    # 检查列是否包含任何非空值
+                    has_data = False
+                    for val in diff_df[col]:
+                        if pd.notna(val) and str(val).strip() != '' and str(val).lower() != 'nan' and str(val).lower() != 'none':
+                            has_data = True
+                            break
+
+                    if has_data:
+                        non_empty_columns.append(col)
+
+            # 按照期望的列顺序排序
+            ordered_columns = ['ID']
+            for col in expected_columns:
+                if col != 'ID' and col in non_empty_columns:
+                    ordered_columns.append(col)
+
+            # 添加其他不在expected_columns中的列
+            for col in non_empty_columns:
+                if col not in ordered_columns and col != 'Item#':  # 确保Item#列不包含在内
+                    ordered_columns.append(col)
 
             # 应用新的列顺序
-            diff_df = diff_df[final_columns]
+            diff_df = diff_df[ordered_columns]
 
             logging.info(f"Created difference DataFrame with shape: {diff_df.shape}")
             logging.info(f"Columns in final report: {diff_df.columns.tolist()}")
@@ -601,7 +665,13 @@ def compare_excels(df1, df2, price_tolerance_pct=1.1):
             for col in diff_df.columns:
                 # 所有列都转为字符串，包括之前排除的Item Name
                 diff_df[col] = diff_df[col].astype(str)
-            
+
+            # 额外处理：确保没有字符串形式的'nan'或'none'
+            for col in diff_df.columns:
+                diff_df[col] = diff_df[col].apply(
+                    lambda x: '' if x.lower() in ['nan', 'none'] else x
+                )
+
             # 特别处理可能存在的Duty和Welfare列（旧名称）
             for old_col in ['Duty', 'Welfare']:
                 if old_col in diff_df.columns:
@@ -756,15 +826,27 @@ if process_button:
                 try:
                     # Save the diff report if it's not empty
                     if not diff_report.empty:
+                        # 在导出前确保没有NaN值
+                        export_diff_report = diff_report.copy()
+
+                        # 将所有NaN值替换为空字符串
+                        export_diff_report = export_diff_report.fillna('')
+
+                        # 额外处理：确保没有字符串形式的'nan'或'none'
+                        for col in export_diff_report.columns:
+                            export_diff_report[col] = export_diff_report[col].apply(
+                                lambda x: '' if isinstance(x, str) and x.lower() in ['nan', 'none'] else x
+                            )
+
                         # 使用xlsxwriter引擎保存，以便设置列宽
                         with pd.ExcelWriter(processed_report_path, engine='xlsxwriter') as writer:
-                            diff_report.to_excel(writer, index=False, sheet_name='差异报告')
+                            export_diff_report.to_excel(writer, index=False, sheet_name='差异报告')
 
                             # 获取工作表
                             worksheet = writer.sheets['差异报告']
 
                             # 设置列宽 - 除了DESC字段外的所有列都宽一倍
-                            for i, col in enumerate(diff_report.columns):
+                            for i, col in enumerate(export_diff_report.columns):
                                 worksheet.set_column(i, i, 22)
 
                         logging.info(f"Saved diff report to {processed_report_path} with custom column widths")
@@ -772,13 +854,14 @@ if process_button:
                         # 创建用于自动下载的BytesIO对象
                         report_buffer = BytesIO()
                         with pd.ExcelWriter(report_buffer, engine='xlsxwriter') as writer:
-                            diff_report.to_excel(writer, index=False, sheet_name='差异报告')
+                            # 使用已经处理过NaN的export_diff_report
+                            export_diff_report.to_excel(writer, index=False, sheet_name='差异报告')
 
                             # 获取工作表
                             worksheet = writer.sheets['差异报告']
 
                             # 设置列宽 - 除了DESC字段外的所有列都宽一倍
-                            for i, col in enumerate(diff_report.columns):
+                            for i, col in enumerate(export_diff_report.columns):
                                 worksheet.set_column(i, i, 22)
 
                         report_buffer.seek(0)
@@ -864,19 +947,19 @@ with tab3:
         if os.path.exists(processed_invoices_path):
             try:
                 processed_invoices_df = pd.read_excel(processed_invoices_path)
-                
+
                 # 添加类型转换，解决Arrow序列化问题
                 columns_to_convert = ['Item#', 'P/N', 'ID', 'Qty', 'Price', 'HSN', 'BCD', 'SWS', 'IGST', 'Item_Name']
                 for col in columns_to_convert:
                     if col in processed_invoices_df.columns:
                         processed_invoices_df[col] = processed_invoices_df[col].astype(str)
-                
+
                 # 特别处理可能存在的Duty和Welfare列（旧名称）
                 for old_col in ['Duty', 'Welfare']:
                     if old_col in processed_invoices_df.columns:
                         processed_invoices_df[old_col] = processed_invoices_df[old_col].astype(str)
                         logging.info(f"转换了处理后发票中的旧列名 {old_col} 为字符串类型")
-                
+
                 st.dataframe(processed_invoices_df, use_container_width=True)
 
                 # Download button
@@ -897,19 +980,19 @@ with tab3:
         if os.path.exists(processed_checklist_path):
             try:
                 processed_checklist_df = pd.read_excel(processed_checklist_path)
-                
+
                 # 添加类型转换，解决Arrow序列化问题
                 columns_to_convert = ['Item#', 'P/N', 'ID', 'Qty', 'Price', 'HSN', 'BCD', 'SWS', 'IGST', 'Item_Name']
                 for col in columns_to_convert:
                     if col in processed_checklist_df.columns:
                         processed_checklist_df[col] = processed_checklist_df[col].astype(str)
-                
+
                 # 特别处理可能存在的Duty和Welfare列（旧名称）
                 for old_col in ['Duty', 'Welfare']:
                     if old_col in processed_checklist_df.columns:
                         processed_checklist_df[old_col] = processed_checklist_df[old_col].astype(str)
                         logging.info(f"转换了处理后核对清单中的旧列名 {old_col} 为字符串类型")
-                
+
                 st.dataframe(processed_checklist_df, use_container_width=True)
 
                 # Download button
@@ -939,13 +1022,13 @@ with tab3:
                         for col in new_items_df.columns:
                             # 所有列都转为字符串，不再特殊处理Item Name
                             new_items_df[col] = new_items_df[col].astype(str)
-                        
+
                         # 特别处理可能存在的Duty和Welfare列（旧名称）
                         for old_col, new_col in [('Duty', 'BCD'), ('Welfare', 'SWS')]:
                             if old_col in new_items_df.columns:
                                 new_items_df[old_col] = new_items_df[old_col].astype(str)
                                 logging.info(f"转换了旧列名 {old_col} 为字符串类型")
-                                
+
                         st.dataframe(new_items_df, use_container_width=True)
 
                         # Download button
@@ -973,12 +1056,18 @@ with tab4:
     if os.path.exists(diff_report_path):
         try:
             diff_report_df = pd.read_excel(diff_report_path)
-            
+
             # 添加类型转换，解决Arrow序列化问题
             for col in diff_report_df.columns:
-                if col not in ['ID', 'Item Name']:  # 这些列可能保持原样
-                    diff_report_df[col] = diff_report_df[col].astype(str)
-                    
+                # 所有列都转为字符串
+                diff_report_df[col] = diff_report_df[col].astype(str)
+
+            # 额外处理：确保没有字符串形式的'nan'或'none'
+            for col in diff_report_df.columns:
+                diff_report_df[col] = diff_report_df[col].apply(
+                    lambda x: '' if isinstance(x, str) and x.lower() in ['nan', 'none'] else x
+                )
+
             if not diff_report_df.empty:
                 st.dataframe(diff_report_df, use_container_width=True)
 
