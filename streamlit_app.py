@@ -234,8 +234,8 @@ def process_invoice_file(file_path, duty_rates):
 
             # Add duty rate columns after all other columns are set
             sheet_df['HSN'] = ''
-            sheet_df['Duty'] = ''
-            sheet_df['Welfare'] = ''
+            sheet_df['BCD'] = ''
+            sheet_df['SWS'] = ''
             sheet_df['IGST'] = ''
             unique_desc = set()
 
@@ -247,13 +247,13 @@ def process_invoice_file(file_path, duty_rates):
                     if itemName in duty_rates:
                         rates = duty_rates[itemName]
                         sheet_df.at[idx, 'HSN'] = rates['hsn']
-                        sheet_df.at[idx, 'Duty'] = rates['bcd']
-                        sheet_df.at[idx, 'Welfare'] = rates['sws']
+                        sheet_df.at[idx, 'BCD'] = rates['bcd']
+                        sheet_df.at[idx, 'SWS'] = rates['sws']
                         sheet_df.at[idx, 'IGST'] = rates['igst']
                     else:
                         sheet_df.at[idx, 'HSN'] = 'new item'
-                        sheet_df.at[idx, 'Duty'] = 'new item'
-                        sheet_df.at[idx, 'Welfare'] = 'new item'
+                        sheet_df.at[idx, 'BCD'] = 'new item'
+                        sheet_df.at[idx, 'SWS'] = 'new item'
                         sheet_df.at[idx, 'IGST'] = 'new item'
                         if itemName not in unique_desc:
                             unique_desc.add(itemName)
@@ -328,8 +328,8 @@ def process_checklist(file_path):
                     'Price': None,
                     'Item_Name': None,
                     'HSN': None,
-                    'Duty': None,
-                    'Welfare': None,
+                    'BCD': None,
+                    'SWS': None,
                     'IGST': None
                 })
             else:
@@ -361,8 +361,8 @@ def process_checklist(file_path):
                         'Price': row['Price'],
                         'Item_Name': item_name,
                         'HSN': int(row['HSN']) if str(row['HSN']).strip().isdigit() else row['HSN'],
-                        'Duty': row['Duty'],
-                        'Welfare': row['Welfare'],
+                        'BCD': row['BCD'],
+                        'SWS': row['SWS'],
                         'IGST': row['IGST'],
                     })
 
@@ -422,7 +422,13 @@ def compare_excels(df1, df2, price_tolerance_pct=1.1):
             logging.info(f"Removed duplicates from DataFrame 2. New shape: {df2.shape}")
 
         # 确保两个 DataFrame 的列名顺序一致
-        df2 = df2[df1.columns]
+        # 首先检查两个 DataFrame 的列是否一致
+        common_columns = list(set(df1.columns) & set(df2.columns))
+        logging.info(f"Common columns between DataFrames: {common_columns}")
+
+        # 只使用两个 DataFrame 中都存在的列进行比较
+        df1 = df1[common_columns]
+        df2 = df2[common_columns]
         logging.info(f"Aligned columns between DataFrames")
 
         # 用于存储差异信息
@@ -499,18 +505,7 @@ def compare_excels(df1, df2, price_tolerance_pct=1.1):
         if diff_data:
             diff_df = pd.DataFrame(diff_data)
 
-            # 替换列名：Duty -> BCD, Welfare -> SWS
-            column_mapping = {}
-            for col in diff_df.columns:
-                if col == 'Duty':
-                    column_mapping[col] = 'BCD'
-                elif col == 'Welfare':
-                    column_mapping[col] = 'SWS'
-                else:
-                    column_mapping[col] = col
-
-            # 重命名列
-            diff_df = diff_df.rename(columns=column_mapping)
+            # 列名已经是 BCD 和 SWS，不需要再进行映射
 
             # 定义期望的列顺序
             expected_columns = ['ID', 'Desc', 'HSN', 'BCD', 'SWS', 'IGST', 'Qty', 'Price', 'P/N']
