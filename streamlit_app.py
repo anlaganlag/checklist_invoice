@@ -674,21 +674,37 @@ if process_button:
                 processed_report_path = os.path.join("output", "processed_report.xlsx")
 
                 try:
-                    processed_invoices.to_excel(processed_invoices_path, index=False)
-                    logging.info(f"Saved processed invoices to {processed_invoices_path}")
 
-                    processed_checklist.to_excel(processed_checklist_path, index=False)
-                    logging.info(f"Saved processed checklist to {processed_checklist_path}")
 
                     # Save the diff report if it's not empty
                     if not diff_report.empty:
-                        diff_report.to_excel(processed_report_path, index=False)
-                        logging.info(f"Saved diff report to {processed_report_path}")
+                        # 使用xlsxwriter引擎保存，以便设置列宽
+                        with pd.ExcelWriter(processed_report_path, engine='xlsxwriter') as writer:
+                            diff_report.to_excel(writer, index=False, sheet_name='差异报告')
+
+                            # 获取工作表
+                            worksheet = writer.sheets['差异报告']
+
+                            # 设置列宽 - 除了DESC字段外的所有列都宽一倍
+                            for i, col in enumerate(diff_report.columns):
+
+                                worksheet.set_column(i, i, 22)
+
+                        logging.info(f"Saved diff report to {processed_report_path} with custom column widths")
 
                         # 创建用于自动下载的BytesIO对象
                         report_buffer = BytesIO()
                         with pd.ExcelWriter(report_buffer, engine='xlsxwriter') as writer:
-                            diff_report.to_excel(writer, index=False)
+                            diff_report.to_excel(writer, index=False, sheet_name='差异报告')
+
+                            # 获取工作表
+                            worksheet = writer.sheets['差异报告']
+
+                            # 设置列宽 - 除了DESC字段外的所有列都宽一倍
+                            for i, col in enumerate(diff_report.columns):
+
+                                worksheet.set_column(i, i, 22)
+
                         report_buffer.seek(0)
 
                         # 设置会话状态变量，用于自动下载
@@ -711,10 +727,43 @@ if process_button:
                         with pd.ExcelWriter(new_items_path, engine='xlsxwriter') as writer:
                             duty_df.to_excel(writer, index=False, sheet_name='CCTV')
 
+                            # 获取CCTV工作表并设置列宽
+                            worksheet_cctv = writer.sheets['CCTV']
+                            for i, col in enumerate(duty_df.columns):
+                                # 计算列的宽度
+                                max_len = max(
+                                    duty_df[col].astype(str).map(len).max(),  # 最长内容
+                                    len(str(col))  # 列名长度
+                                ) + 2  # 添加一些额外空间
+
+                                # 除了描述类列外的所有列都宽一倍
+                                if col != 'Item Name' and 'Desc' not in col:
+                                    max_len = max_len * 1.2
+
+                                # 设置列宽
+                                worksheet_cctv.set_column(i, i, max_len)
+
                             # Add new descriptions to a new sheet with required columns
                             required_columns = ['发票及项号', 'Item Name', 'Final BCD', 'Final SWS', 'Final IGST', 'HSN1']
                             new_items[required_columns].to_excel(writer, sheet_name='newDutyRate', index=False)
-                        logging.info(f"Saved new items to {new_items_path}")
+
+                            # 获取newDutyRate工作表并设置列宽
+                            worksheet_new = writer.sheets['newDutyRate']
+                            for i, col in enumerate(required_columns):
+                                # 计算列的宽度
+                                max_len = max(
+                                    new_items[col].astype(str).map(len).max(),  # 最长内容
+                                    len(str(col))  # 列名长度
+                                ) + 2  # 添加一些额外空间
+
+                                # 除了描述类列外的所有列都宽一倍
+                                if col != 'Item Name':
+                                    max_len = max_len * 1.2
+
+                                # 设置列宽
+                                worksheet_new.set_column(i, i, max_len)
+
+                        logging.info(f"Saved new items to {new_items_path} with custom column widths")
                     except Exception as e:
                         logging.error(f"Error saving new items: {str(e)}")
                         logging.exception("Exception details:")
