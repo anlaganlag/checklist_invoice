@@ -1,0 +1,15 @@
+{
+    "files.encoding": "utf8",
+    "files.autoGuessEncoding": true,
+    "[bat]": {
+        "files.encoding": "gbk"
+    },
+    "[markdown]": {
+        "files.encoding": "utf8"
+    },
+    "[python]": {
+        "files.encoding": "utf8"
+    },
+    "terminal.integrated.shellArgs.windows": ["-NoExit", "-Command", "chcp 65001"],
+    "terminal.integrated.fontFamily": "Consolas, 'Courier New', monospace"
+} 

@@ -6,6 +6,8 @@ import warnings
 import glob
 import logging
 import datetime
+import urllib.parse
+import webbrowser
 from io import BytesIO
 
 # Set up logging
@@ -701,6 +703,101 @@ def compare_excels(df1, df2, price_tolerance_pct=1.1):
         st.error(error_msg)
         return pd.DataFrame()
 
+def generate_email_draft(diff_report_df):
+    """
+    根据差异报告生成邮件草稿内容
+    """
+    logging.info("生成邮件草稿开始")
+    
+    if diff_report_df.empty:
+        logging.info("没有差异数据，无需生成邮件草稿")
+        return None
+    
+    try:
+        email_body_lines = []
+        email_body_lines.append("-------------------------------------------------------")
+        email_body_lines.append("Hello ,")
+        email_body_lines.append("")
+        email_body_lines.append("Please revise the checklist as below:")
+        
+        # 遍历每一行差异数据
+        for _, row in diff_report_df.iterrows():
+            invoice_id = row.get('ID', 'Unknown')
+            
+            # 构建邮件内容行
+            corrections = []
+            
+            # 检查各个字段的差异并构建修正信息
+            if 'HSN' in row and pd.notna(row['HSN']) and str(row['HSN']).strip():
+                hsn_correct = str(row['HSN']).split(' -> ')[0] if ' -> ' in str(row['HSN']) else str(row['HSN'])
+                corrections.append(f"HSN {hsn_correct}")
+            
+            if 'BCD' in row and pd.notna(row['BCD']) and str(row['BCD']).strip():
+                bcd_correct = str(row['BCD']).split(' -> ')[0] if ' -> ' in str(row['BCD']) else str(row['BCD'])
+                corrections.append(f"BCD is {bcd_correct}")
+            
+            if 'SWS' in row and pd.notna(row['SWS']) and str(row['SWS']).strip():
+                sws_correct = str(row['SWS']).split(' -> ')[0] if ' -> ' in str(row['SWS']) else str(row['SWS'])
+                corrections.append(f"SWS is {sws_correct}")
+            
+            if 'IGST' in row and pd.notna(row['IGST']) and str(row['IGST']).strip():
+                hgst_correct = str(row['IGST']).split(' -> ')[0] if ' -> ' in str(row['IGST']) else str(row['IGST'])
+                corrections.append(f"HGST is {hgst_correct}")
+            
+            if 'Qty' in row and pd.notna(row['Qty']) and str(row['Qty']).strip():
+                qty_correct = str(row['Qty']).split(' -> ')[0] if ' -> ' in str(row['Qty']) else str(row['Qty'])
+                corrections.append(f"Qty is {qty_correct}")
+            
+            if 'Price' in row and pd.notna(row['Price']) and str(row['Price']).strip():
+                price_correct = str(row['Price']).split(' -> ')[0] if ' -> ' in str(row['Price']) else str(row['Price'])
+                corrections.append(f"Price is {price_correct}")
+            
+            if 'Desc' in row and pd.notna(row['Desc']) and str(row['Desc']).strip():
+                desc_correct = str(row['Desc']).split(' -> ')[0] if ' -> ' in str(row['Desc']) else str(row['Desc'])
+                corrections.append(f"Description is {desc_correct}")
+            
+            if corrections:
+                email_line = f"Invoice {invoice_id} use {' '.join(corrections)}。"
+                email_body_lines.append(email_line)
+        
+        email_body_lines.append("")
+        email_body_lines.append("Thank you!")
+        email_body_lines.append("-------------------------------------------------------")
+        
+        email_content = "\n".join(email_body_lines)
+        logging.info(f"邮件草稿生成完成，共{len(diff_report_df)}条差异记录")
+        
+        return email_content
+        
+    except Exception as e:
+        error_msg = f"生成邮件草稿失败: {str(e)}"
+        logging.error(error_msg)
+        logging.exception("Exception details:")
+        return None
+
+def open_email_client(email_content, subject="Checklist Revision Required"):
+    """
+    打开默认邮件客户端并填充邮件内容
+    """
+    try:
+        # URL编码邮件内容
+        encoded_subject = urllib.parse.quote(subject)
+        encoded_body = urllib.parse.quote(email_content)
+        
+        # 构建mailto链接
+        mailto_url = f"mailto:?subject={encoded_subject}&body={encoded_body}"
+        
+        # 打开邮件客户端
+        webbrowser.open(mailto_url)
+        logging.info("已打开默认邮件客户端")
+        return True
+        
+    except Exception as e:
+        error_msg = f"打开邮件客户端失败: {str(e)}"
+        logging.error(error_msg)
+        logging.exception("Exception details:")
+        return False
+
 # File Upload Tab
 with tab1:
     st.markdown("<h2 class='sub-header'>文件上传</h2>", unsafe_allow_html=True)
@@ -880,9 +977,20 @@ if process_button:
                         # 设置会话状态变量，用于自动下载
                         st.session_state.auto_download_report = report_buffer
                         st.session_state.show_download_button = True
+                        
+                        # 生成邮件草稿
+                        logging.info("Step 6: Generating email draft")
+                        email_content = generate_email_draft(diff_report)
+                        if email_content:
+                            st.session_state.email_draft_content = email_content
+                            st.session_state.show_email_button = True
+                            logging.info("邮件草稿生成成功")
+                        else:
+                            st.session_state.show_email_button = False
                     else:
                         logging.info("No differences found, skipping diff report creation")
                         st.session_state.show_download_button = False
+                        st.session_state.show_email_button = False
                 except Exception as e:
                     logging.error(f"Error saving output files: {str(e)}")
                     logging.exception("Exception details:")
@@ -1082,13 +1190,44 @@ with tab4:
             if not diff_report_df.empty:
                 st.dataframe(diff_report_df, use_container_width=True)
 
-                # Download button
-                with open(diff_report_path, "rb") as file:
-                    st.download_button(
-                        label="下载差异报告",
-                        data=file,
-                        file_name="processed_report.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    # Download button
+                    with open(diff_report_path, "rb") as file:
+                        st.download_button(
+                            label="下载差异报告",
+                            data=file,
+                            file_name="processed_report.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        )
+                
+                with col2:
+                    # 生成邮件草稿按钮
+                    if st.button("生成通知邮件草稿", type="secondary", key="generate_email_button"):
+                        email_content = generate_email_draft(diff_report_df)
+                        if email_content:
+                            # 显示邮件内容预览
+                            st.session_state.email_draft_content = email_content
+                            st.success("邮件草稿已生成！")
+                            
+                            # 尝试打开邮件客户端
+                            if open_email_client(email_content):
+                                st.info("已尝试打开默认邮件客户端")
+                            else:
+                                st.warning("无法打开邮件客户端，请手动复制下方内容")
+                        else:
+                            st.error("生成邮件草稿失败")
+                
+                # 显示邮件内容预览
+                if 'email_draft_content' in st.session_state:
+                    st.markdown("### 邮件草稿预览")
+                    st.text_area(
+                        "邮件内容",
+                        st.session_state.email_draft_content,
+                        height=300,
+                        help="您可以复制此内容到邮件客户端",
+                        key="diff_email_preview"
                     )
             else:
                 st.success("没有发现差异")
@@ -1150,12 +1289,41 @@ st.markdown("---")
 if process_button and 'show_download_button' in st.session_state and st.session_state.show_download_button:
     if 'auto_download_report' in st.session_state:
         st.success("处理完成！比对报告已准备好下载")
-        st.download_button(
-            label="点击下载比对报告",
-            data=st.session_state.auto_download_report,
-            file_name="比对报告.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            key="auto_download_report_button"
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.download_button(
+                label="点击下载比对报告",
+                data=st.session_state.auto_download_report,
+                file_name="比对报告.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                key="auto_download_report_button"
+            )
+        
+        with col2:
+            # 自动生成邮件草稿按钮
+            if 'show_email_button' in st.session_state and st.session_state.show_email_button:
+                if st.button("生成通知邮件草稿", type="secondary", key="auto_generate_email_button"):
+                    if 'email_draft_content' in st.session_state:
+                        # 尝试打开邮件客户端
+                        if open_email_client(st.session_state.email_draft_content):
+                            st.info("已尝试打开默认邮件客户端")
+                        else:
+                            st.warning("无法打开邮件客户端，请前往'差异报告'标签页查看邮件内容")
+                    else:
+                        st.error("邮件草稿内容不可用")
+
+# 显示自动生成的邮件草稿预览
+if process_button and 'email_draft_content' in st.session_state:
+    st.markdown("### 📧 邮件草稿已自动生成")
+    with st.expander("查看邮件内容", expanded=False):
+        st.text_area(
+            "邮件内容",
+            st.session_state.email_draft_content,
+            height=200,
+            help="您可以复制此内容到邮件客户端",
+            key="auto_email_preview"
         )
 
-st.markdown("© 2025 Checklist核对系统 | 版本 1.1")
+st.markdown("© 2025 Checklist核对系统 | 版本 1.2")
