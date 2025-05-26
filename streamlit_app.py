@@ -315,6 +315,82 @@ with st.sidebar:
 # Main content area with tabs
 tab1, tab2, tab3, tab4, tab5 = st.tabs(["文件上传", "数据预览", "处理结果", "差异报告", "日志"])
 
+def normalize_item_name(item_name):
+    """
+    标准化Item Name，用于更好的匹配
+    """
+    if pd.isna(item_name) or item_name == '':
+        return ''
+    
+    # 转换为字符串并转为大写
+    normalized = str(item_name).upper()
+    
+    # 移除常见的特殊字符和空格
+    normalized = normalized.replace(' ', '').replace('-', '').replace('_', '')
+    normalized = normalized.replace(',', '.').replace(';', '.')
+    
+    # 移除常见的后缀
+    suffixes_to_remove = ['PARTNO', 'PART', 'NO', 'NUM', 'NUMBER']
+    for suffix in suffixes_to_remove:
+        if normalized.endswith(suffix):
+            normalized = normalized[:-len(suffix)]
+    
+    return normalized.strip()
+
+def find_best_match(item_name, duty_rates_dict):
+    """
+    为给定的item_name在duty_rates字典中找到最佳匹配
+    """
+    if not item_name or pd.isna(item_name):
+        return None
+    
+    normalized_item = normalize_item_name(item_name)
+    
+    # 首先尝试精确匹配
+    if item_name in duty_rates_dict:
+        return item_name
+    
+    # 尝试标准化后的精确匹配
+    for duty_item in duty_rates_dict.keys():
+        if normalize_item_name(duty_item) == normalized_item:
+            return duty_item
+    
+    # 尝试部分匹配（包含关系）- 改进版本
+    best_match = None
+    best_score = 0
+    
+    for duty_item in duty_rates_dict.keys():
+        normalized_duty = normalize_item_name(duty_item)
+        
+        # 计算匹配分数
+        score = 0
+        
+        # 完全包含关系
+        if normalized_item in normalized_duty:
+            score = len(normalized_item) / len(normalized_duty)
+        elif normalized_duty in normalized_item:
+            score = len(normalized_duty) / len(normalized_item)
+        else:
+            # 计算公共子串长度
+            common_length = 0
+            min_len = min(len(normalized_item), len(normalized_duty))
+            for i in range(min_len):
+                if normalized_item[i] == normalized_duty[i]:
+                    common_length += 1
+                else:
+                    break
+            
+            # 如果有足够长的公共前缀，也认为是匹配
+            if common_length >= 8:  # 至少8个字符的公共前缀
+                score = common_length / max(len(normalized_item), len(normalized_duty))
+        
+        # 更新最佳匹配
+        if score > best_score and score >= 0.7:  # 至少70%的匹配度
+            best_score = score
+            best_match = duty_item
+    
+    return best_match
+
 # Functions from the original scripts
 def get_duty_rates(file_path):
     logging.info(f"Reading duty rates from: {file_path}")
@@ -369,8 +445,8 @@ def process_invoice_file(file_path, duty_rates):
         original_sheet_names = excel_file.sheet_names[1:]  # Skip the first sheet
         logging.info(f"Processing sheets (skipping first): {original_sheet_names}")
 
-        # Process sheet names for display and ID creation (remove CI- prefix)
-        processed_sheet_names = [name.replace('CI-', '') if name.startswith('CI-') else name
+        # Process sheet names for display and ID creation (remove CI- prefix and trim spaces)
+        processed_sheet_names = [name.replace('CI-', '').strip() if name.startswith('CI-') else name.strip()
                       for name in original_sheet_names]
         logging.info(f"Processed sheet names: {processed_sheet_names}")
 
@@ -417,8 +493,8 @@ def process_invoice_file(file_path, duty_rates):
                 else:
                     sheet_df[new_name] = df.iloc[:, idx]
 
-            # Create ID in the first column
-            sheet_df.loc[1:,'ID'] = processed_sheet_name + '_' + sheet_df['Item#'].astype(str)
+            # Create ID in the first column (trim spaces from Item# to ensure clean IDs)
+            sheet_df.loc[1:,'ID'] = processed_sheet_name + '_' + sheet_df['Item#'].astype(str).str.strip()
             logging.info(f"Created IDs for sheet {original_sheet_name}")
 
             # Add duty rate columns after all other columns are set
@@ -433,12 +509,19 @@ def process_invoice_file(file_path, duty_rates):
             for idx, row in sheet_df.iterrows():
                 itemName = row['Item_Name']
                 if pd.notna(itemName) and itemName != '':
-                    if itemName in duty_rates:
-                        rates = duty_rates[itemName]
+                    # 使用改进的匹配算法
+                    matched_duty_item = find_best_match(itemName, duty_rates)
+                    
+                    if matched_duty_item:
+                        rates = duty_rates[matched_duty_item]
                         sheet_df.at[idx, 'HSN'] = rates['hsn']
                         sheet_df.at[idx, 'BCD'] = rates['bcd']
                         sheet_df.at[idx, 'SWS'] = rates['sws']
                         sheet_df.at[idx, 'IGST'] = rates['igst']
+                        
+                        # 记录匹配信息用于调试
+                        if matched_duty_item != itemName:
+                            logging.info(f"Fuzzy match found: '{itemName}' -> '{matched_duty_item}'")
                     else:
                         sheet_df.at[idx, 'HSN'] = 'new item'
                         sheet_df.at[idx, 'BCD'] = 'new item'
@@ -447,6 +530,7 @@ def process_invoice_file(file_path, duty_rates):
                         if itemName not in unique_desc:
                             unique_desc.add(itemName)
                             new_items_count += 1
+                            logging.info(f"No match found for item: '{itemName}' (normalized: '{normalize_item_name(itemName)}')")
                             # Add unmatched items to new_descriptions_df
                             new_descriptions_df = pd.concat([new_descriptions_df, pd.DataFrame({
                                 '发票及项号': [str(row['ID'])],
@@ -560,8 +644,8 @@ def process_checklist(file_path):
                         break
             
             if 'Invoice:' in str(pn):
-                # 提取发票号
-                invoice_no = pn.split('Invoice:')[1].split('dt.')[0].strip()
+                # 提取发票号并去除所有空格
+                invoice_no = pn.split('Invoice:')[1].split('dt.')[0].strip().replace(' ', '')
                 current_invoice = invoice_no
                 invoice_count += 1
                 logging.info(f"Found invoice #{invoice_count}: {invoice_no}")
@@ -583,12 +667,14 @@ def process_checklist(file_path):
                 # 处理常规行 - 使用安全的列访问
                 item_col = column_mapping.get('Item#')
                 if item_col and item_col in df.columns and pd.notna(row[item_col]) and current_invoice:
-                    # Convert Item# to integer before concatenating to remove the decimal
+                    # Convert Item# to integer before concatenating to remove the decimal and spaces
                     try:
                         item_num = int(float(row[item_col])) if pd.notna(row[item_col]) else 0
                         item_id = f"{current_invoice}_{item_num}"
                     except (ValueError, TypeError):
-                        item_id = f"{current_invoice}_{str(row[item_col])}"
+                        # Remove spaces from item number to ensure clean IDs
+                        clean_item = str(row[item_col]).strip().replace(' ', '')
+                        item_id = f"{current_invoice}_{clean_item}"
                     
                     # 安全获取Desc列
                     desc_col = column_mapping.get('Desc')
