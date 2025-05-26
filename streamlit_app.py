@@ -48,15 +48,16 @@ st.set_page_config(
 st.markdown("""
 <style>
     .main-header {
-        font-size: 2.5rem;
+        font-size: 2.2rem;
         color: #1E88E5;
         text-align: center;
-        margin-bottom: 1rem;
+        margin-bottom: 0.5rem;
+        margin-top: 0;
     }
     .sub-header {
         font-size: 1.5rem;
         color: #0D47A1;
-        margin-top: 2rem;
+        margin-top: 1rem;
         margin-bottom: 1rem;
     }
     .success-message {
@@ -71,11 +72,50 @@ st.markdown("""
         color: #FF9800;
         font-weight: bold;
     }
-    .info-box {
+    
+    /* 文件上传区域样式优化 */
+    .upload-section {
         background-color: #E3F2FD;
-        padding: 1rem;
-        border-radius: 0.5rem;
+        padding: 1.5rem;
+        border-radius: 12px;
+        border: 1px solid #BBDEFB;
         margin-bottom: 1rem;
+        min-height: 100px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        text-align: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .upload-section h3 {
+        margin-top: 0;
+        margin-bottom: 0.5rem;
+        color: #1565C0;
+        font-size: 1.2rem;
+        font-weight: 600;
+    }
+    
+    /* 紧凑的列布局 */
+    .stColumns {
+        gap: 1.5rem !important;
+    }
+    
+    /* 减少标签页间距 */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    /* 优化文件上传器样式 */
+    .stFileUploader {
+        margin-bottom: 0.5rem;
+    }
+    
+    /* 优化成功和信息消息样式 */
+    .stSuccess, .stInfo {
+        margin-top: 0.5rem;
+        margin-bottom: 0.5rem;
     }
     
     /* 防止按钮点击后页面跳转的样式 */
@@ -92,6 +132,7 @@ st.markdown("""
     /* 保持页面位置的样式 */
     .main .block-container {
         scroll-behavior: smooth;
+        padding-top: 1rem;
     }
     
     /* 改善按钮的视觉反馈 */
@@ -105,6 +146,49 @@ st.markdown("""
     /* 防止页面重新加载时的闪烁 */
     .stApp {
         transition: none;
+    }
+    
+    /* 优化侧边栏样式 */
+    .css-1d391kg {
+        padding-top: 1rem;
+    }
+    
+    /* 侧边栏文件上传器样式 */
+    .css-1d391kg .stFileUploader {
+        margin-bottom: 1rem;
+    }
+    
+    /* 侧边栏按钮样式 */
+    .css-1d391kg .stButton > button {
+        width: 100%;
+        margin-top: 0.5rem;
+    }
+    
+    /* 侧边栏标题样式 */
+    .css-1d391kg h2, .css-1d391kg h3 {
+        margin-top: 1rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    /* 侧边栏滑块样式 */
+    .css-1d391kg .stSlider {
+        margin-bottom: 0.5rem;
+    }
+    
+    /* 减少页面顶部间距 */
+    .block-container {
+        padding-top: 1rem;
+        padding-bottom: 1rem;
+    }
+    
+    /* 减少各个组件之间的间距 */
+    .element-container {
+        margin-bottom: 0.5rem;
+    }
+    
+    /* 优化标签页容器 */
+    .stTabs > div > div > div > div {
+        padding-top: 1rem;
     }
 </style>
 
@@ -136,40 +220,41 @@ st.markdown("<h1 class='main-header'>Checklist核对系统</h1>", unsafe_allow_h
 
 # Sidebar
 with st.sidebar:
-    st.image("https://img.icons8.com/color/96/000000/invoice.png", width=100)
+    st.image("https://img.icons8.com/color/96/000000/invoice.png", width=80)
     st.markdown("## 操作面板")
 
     # File upload section
-    st.markdown("### 上传文件")
+    st.markdown("### 📁 上传文件")
 
     # Upload duty_rate file
-    duty_rate_file = st.file_uploader("上传税率文件 (duty_rate.xlsx)", type=["xlsx"])
+    duty_rate_file = st.file_uploader("上传税率文件", type=["xlsx"], key="duty_rate")
 
     # Upload checklist file
-    checklist_file = st.file_uploader("上传核对清单 (processing_checklist.xlsx)", type=["xlsx"])
+    checklist_file = st.file_uploader("上传核对清单", type=["xlsx"], key="checklist")
 
     # Upload invoices file
-    invoices_file = st.file_uploader("上传发票文件 (processing_invoices*.xlsx)", type=["xlsx"])
+    invoices_file = st.file_uploader("上传发票文件", type=["xlsx"], key="invoices")
 
     # Add tolerance input for Price comparison
-    st.markdown("### 设置")
+    st.markdown("### ⚙️ 设置")
     price_tolerance = st.slider("价格比对误差范围 (%)", min_value=0.1, max_value=5.0, value=1.1, step=0.1)
     st.caption(f"当前设置: 价格差异超过 {price_tolerance}% 将被标记")
 
     # Process button
-    process_button = st.button("开始处理", type="primary")
+    st.markdown("### 🚀 开始处理")
+    process_button = st.button("开始处理", type="primary", use_container_width=True)
 
     # Help section
     st.markdown("---")
-    st.markdown("### 帮助")
+    st.markdown("### 💡 帮助")
     with st.expander("如何使用"):
         st.markdown("""
-        1. 上传税率文件 (duty_rate.xlsx)
-        2. 上传核对清单 (processing_checklist.xlsx)
-        3. 上传发票文件 (processing_invoices*.xlsx)
-        4. 调整价格比对误差范围（可选）
-        5. 点击"开始处理"按钮
-        6. 查看处理结果
+        1. 📄 上传税率文件 (duty_rate.xlsx)
+        2. 📋 上传核对清单 (processing_checklist.xlsx)
+        3. 🧾 上传发票文件 (processing_invoices*.xlsx)
+        4. ⚙️ 调整价格比对误差范围（可选）
+        5. 🚀 点击"开始处理"按钮
+        6. 📊 查看处理结果
         """)
 
 # Main content area with tabs
@@ -849,43 +934,53 @@ def open_email_client(email_content, subject="Checklist Revision Required"):
 with tab1:
     st.markdown("<h2 class='sub-header'>文件上传</h2>", unsafe_allow_html=True)
 
-    col1, col2, col3 = st.columns(3)
+    # 创建更紧凑的三列布局
+    col1, col2, col3 = st.columns([1, 1, 1], gap="medium")
 
     with col1:
-        st.markdown("<div class='info-box'>", unsafe_allow_html=True)
-        st.markdown("### 税率文件")
+        st.markdown("""
+        <div class='upload-section'>
+            <h3>税率文件</h3>
+        </div>
+        """, unsafe_allow_html=True)
         if duty_rate_file is not None:
-            st.success(f"已上传: {duty_rate_file.name}")
+            st.success(f"✅ 已上传: {duty_rate_file.name}")
             # Save the uploaded file
             with open(os.path.join("input", "duty_rate.xlsx"), "wb") as f:
                 f.write(duty_rate_file.getbuffer())
         else:
-            st.warning("请上传税率文件")
-        st.markdown("</div>", unsafe_allow_html=True)
+            st.info("📁 请上传税率文件")
 
     with col2:
-        st.markdown("<div class='info-box'>", unsafe_allow_html=True)
-        st.markdown("### 核对清单")
+        st.markdown("""
+        <div class='upload-section'>
+            <h3>核对清单</h3>
+        </div>
+        """, unsafe_allow_html=True)
         if checklist_file is not None:
-            st.success(f"已上传: {checklist_file.name}")
+            st.success(f"✅ 已上传: {checklist_file.name}")
             # Save the uploaded file
             with open(os.path.join("input", "processing_checklist.xlsx"), "wb") as f:
                 f.write(checklist_file.getbuffer())
         else:
-            st.warning("请上传核对清单")
-        st.markdown("</div>", unsafe_allow_html=True)
+            st.info("📁 请上传核对清单")
 
     with col3:
-        st.markdown("<div class='info-box'>", unsafe_allow_html=True)
-        st.markdown("### 发票文件")
+        st.markdown("""
+        <div class='upload-section'>
+            <h3>发票文件</h3>
+        </div>
+        """, unsafe_allow_html=True)
         if invoices_file is not None:
-            st.success(f"已上传: {invoices_file.name}")
+            st.success(f"✅ 已上传: {invoices_file.name}")
             # Save the uploaded file
             with open(os.path.join("input", "processing_invoices.xlsx"), "wb") as f:
                 f.write(invoices_file.getbuffer())
         else:
-            st.warning("请上传发票文件")
-        st.markdown("</div>", unsafe_allow_html=True)
+            st.info("📁 请上传发票文件")
+    
+    # 添加一些间距
+    st.markdown("<br>", unsafe_allow_html=True)
 
 # Data Preview Tab
 with tab2:
@@ -1389,7 +1484,7 @@ if 'show_download_button' in st.session_state and st.session_state.show_download
                 success_container = st.container()
                 with success_container:
                     st.success("✅ 报告下载已开始")
-                    st.info("�� 文件将保存到您的默认下载文件夹")
+                    st.info(" 文件将保存到您的默认下载文件夹")
         
         with col2:
             # 使用session state来管理邮件生成状态，避免页面跳转
