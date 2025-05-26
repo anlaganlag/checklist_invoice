@@ -77,7 +77,54 @@ st.markdown("""
         border-radius: 0.5rem;
         margin-bottom: 1rem;
     }
+    
+    /* 防止按钮点击后页面跳转的样式 */
+    .stDownloadButton > button {
+        position: relative;
+        z-index: 1;
+    }
+    
+    .stButton > button {
+        position: relative;
+        z-index: 1;
+    }
+    
+    /* 保持页面位置的样式 */
+    .main .block-container {
+        scroll-behavior: smooth;
+    }
+    
+    /* 改善按钮的视觉反馈 */
+    .stDownloadButton > button:hover,
+    .stButton > button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        transition: all 0.2s ease;
+    }
+    
+    /* 防止页面重新加载时的闪烁 */
+    .stApp {
+        transition: none;
+    }
 </style>
+
+<script>
+// 防止按钮点击后页面跳转到顶部
+document.addEventListener('DOMContentLoaded', function() {
+    // 监听所有按钮点击事件
+    document.addEventListener('click', function(e) {
+        if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+            // 记录当前滚动位置
+            const scrollPosition = window.pageYOffset || document.documentElement.scrollTop;
+            
+            // 延迟恢复滚动位置
+            setTimeout(function() {
+                window.scrollTo(0, scrollPosition);
+            }, 100);
+        }
+    });
+});
+</script>
 """, unsafe_allow_html=True)
 
 # Create directories if they don't exist
@@ -1193,31 +1240,58 @@ with tab4:
                 col1, col2 = st.columns(2)
                 
                 with col1:
-                    # Download button
+                    # 修改下载按钮，添加use_container_width=True来防止跳转
                     with open(diff_report_path, "rb") as file:
                         st.download_button(
-                            label="下载差异报告",
+                            label="📥 下载差异报告",
                             data=file,
                             file_name="processed_report.xlsx",
-                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            use_container_width=True,
+                            help="下载差异比对报告文件"
                         )
                 
                 with col2:
-                    # 生成邮件草稿按钮
-                    if st.button("生成通知邮件草稿", type="secondary", key="generate_email_button"):
+                    # 改进邮件草稿按钮，使用更好的状态管理
+                    # 初始化邮件生成状态
+                    if 'email_button_clicked' not in st.session_state:
+                        st.session_state.email_button_clicked = False
+                    
+                    if st.button("📧 生成通知邮件草稿", type="secondary", key="generate_email_button", use_container_width=True):
+                        # 设置按钮点击状态
+                        st.session_state.email_button_clicked = True
+                        
                         email_content = generate_email_draft(diff_report_df)
                         if email_content:
                             # 显示邮件内容预览
                             st.session_state.email_draft_content = email_content
-                            st.success("邮件草稿已生成！")
+                            
+                            # 使用容器来显示状态消息，避免页面跳转
+                            success_container = st.container()
+                            with success_container:
+                                st.success("✅ 邮件草稿已生成！")
                             
                             # 尝试打开邮件客户端
                             if open_email_client(email_content):
-                                st.info("已尝试打开默认邮件客户端")
+                                info_container = st.container()
+                                with info_container:
+                                    st.info("📧 已尝试打开默认邮件客户端")
                             else:
-                                st.warning("无法打开邮件客户端，请手动复制下方内容")
+                                warning_container = st.container()
+                                with warning_container:
+                                    st.warning("⚠️ 无法打开邮件客户端，请查看下方邮件内容")
                         else:
-                            st.error("生成邮件草稿失败")
+                            error_container = st.container()
+                            with error_container:
+                                st.error("❌ 生成邮件草稿失败")
+                    
+                    # 如果按钮被点击过，显示重置选项
+                    if st.session_state.email_button_clicked:
+                        if st.button("🔄 重置", key="reset_email_button", help="重置邮件生成状态"):
+                            st.session_state.email_button_clicked = False
+                            if 'email_draft_content' in st.session_state:
+                                del st.session_state.email_draft_content
+                            st.rerun()
                 
                 # 显示邮件内容预览
                 if 'email_draft_content' in st.session_state:
@@ -1286,36 +1360,73 @@ with tab5:
 st.markdown("---")
 
 # 自动下载比对报告
-if process_button and 'show_download_button' in st.session_state and st.session_state.show_download_button:
+if 'show_download_button' in st.session_state and st.session_state.show_download_button:
     if 'auto_download_report' in st.session_state:
         st.success("处理完成！比对报告已准备好下载")
         
         col1, col2 = st.columns(2)
         
         with col1:
-            st.download_button(
-                label="点击下载比对报告",
+            # 使用session state来管理下载状态，避免页面跳转
+            # 初始化下载状态
+            if 'download_clicked' not in st.session_state:
+                st.session_state.download_clicked = False
+            
+            # 创建下载按钮
+            download_button = st.download_button(
+                label="📥 点击下载比对报告",
                 data=st.session_state.auto_download_report,
                 file_name="比对报告.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                key="auto_download_report_button"
+                key="auto_download_report_button",
+                use_container_width=True,
+                help="点击下载差异比对报告文件"
             )
+            
+            # 如果下载按钮被点击，显示反馈
+            if download_button:
+                st.session_state.download_clicked = True
+                success_container = st.container()
+                with success_container:
+                    st.success("✅ 报告下载已开始")
+                    st.info("�� 文件将保存到您的默认下载文件夹")
         
         with col2:
-            # 自动生成邮件草稿按钮
+            # 使用session state来管理邮件生成状态，避免页面跳转
             if 'show_email_button' in st.session_state and st.session_state.show_email_button:
-                if st.button("生成通知邮件草稿", type="secondary", key="auto_generate_email_button"):
+                # 检查是否已经生成过邮件草稿
+                if 'email_generated' not in st.session_state:
+                    st.session_state.email_generated = False
+                
+                # 使用不同的按钮文本来反映状态
+                button_label = "🔄 重新生成邮件草稿" if st.session_state.email_generated else "📧 生成通知邮件草稿"
+                
+                if st.button(button_label, type="secondary", key="auto_generate_email_button", use_container_width=True, help="生成并打开邮件客户端"):
                     if 'email_draft_content' in st.session_state:
+                        # 标记邮件已生成
+                        st.session_state.email_generated = True
+                        
+                        # 使用容器来显示状态消息，避免页面跳转
+                        success_container = st.container()
+                        with success_container:
+                            st.success("✅ 邮件草稿已准备就绪")
+                        
                         # 尝试打开邮件客户端
                         if open_email_client(st.session_state.email_draft_content):
-                            st.info("已尝试打开默认邮件客户端")
+                            info_container = st.container()
+                            with info_container:
+                                st.info("📧 已打开默认邮件客户端")
                         else:
-                            st.warning("无法打开邮件客户端，请前往'差异报告'标签页查看邮件内容")
+                            warning_container = st.container()
+                            with warning_container:
+                                st.warning("⚠️ 无法打开邮件客户端，请查看下方邮件内容")
                     else:
-                        st.error("邮件草稿内容不可用")
+                        error_container = st.container()
+                        with error_container:
+                            st.error("❌ 邮件草稿内容不可用，请重新处理数据")
 
-# 显示自动生成的邮件草稿预览
-if process_button and 'email_draft_content' in st.session_state:
+# 显示自动生成的邮件草稿预览 - 使用session state控制显示
+if 'email_draft_content' in st.session_state and st.session_state.email_draft_content:
     st.markdown("### 📧 邮件草稿已自动生成")
     with st.expander("查看邮件内容", expanded=False):
         st.text_area(
@@ -1323,7 +1434,8 @@ if process_button and 'email_draft_content' in st.session_state:
             st.session_state.email_draft_content,
             height=200,
             help="您可以复制此内容到邮件客户端",
-            key="auto_email_preview"
+            key="auto_email_preview",
+            disabled=True  # 设置为只读，避免意外修改
         )
 
 st.markdown("© 2025 Checklist核对系统 | 版本 1.2")
