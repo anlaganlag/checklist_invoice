@@ -96,6 +96,37 @@ st.markdown("""
         font-weight: 600;
     }
     
+    /* 设置区域样式 */
+    .settings-section {
+        background-color: #F3E5F5;
+        padding: 1.5rem;
+        border-radius: 12px;
+        border: 1px solid #E1BEE7;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    /* 处理按钮区域样式 */
+    .process-section {
+        background-color: #E8F5E8;
+        padding: 1.5rem;
+        border-radius: 12px;
+        border: 1px solid #C8E6C9;
+        margin-bottom: 1rem;
+        text-align: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    /* 帮助区域样式 */
+    .help-section {
+        background-color: #FFF3E0;
+        padding: 1.5rem;
+        border-radius: 12px;
+        border: 1px solid #FFCC02;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
     /* 紧凑的列布局 */
     .stColumns {
         gap: 1.5rem !important;
@@ -115,6 +146,11 @@ st.markdown("""
     /* 优化成功和信息消息样式 */
     .stSuccess, .stInfo {
         margin-top: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    /* 优化进度条样式 */
+    .stProgress {
         margin-bottom: 0.5rem;
     }
     
@@ -221,41 +257,60 @@ st.markdown("<h1 class='main-header'>Checklist核对系统</h1>", unsafe_allow_h
 # Sidebar
 with st.sidebar:
     st.image("https://img.icons8.com/color/96/000000/invoice.png", width=80)
-    st.markdown("## 操作面板")
-
-    # File upload section
-    st.markdown("### 📁 上传文件")
-
-    # Upload duty_rate file
-    duty_rate_file = st.file_uploader("上传税率文件", type=["xlsx"], key="duty_rate")
-
-    # Upload checklist file
-    checklist_file = st.file_uploader("上传核对清单", type=["xlsx"], key="checklist")
-
-    # Upload invoices file
-    invoices_file = st.file_uploader("上传发票文件", type=["xlsx"], key="invoices")
-
-    # Add tolerance input for Price comparison
-    st.markdown("### ⚙️ 设置")
-    price_tolerance = st.slider("价格比对误差范围 (%)", min_value=0.1, max_value=5.0, value=1.1, step=0.1)
-    st.caption(f"当前设置: 价格差异超过 {price_tolerance}% 将被标记")
-
-    # Process button
-    st.markdown("### 🚀 开始处理")
-    process_button = st.button("开始处理", type="primary", use_container_width=True)
-
-    # Help section
+    st.markdown("## Checklist核对系统")
+    st.markdown("**版本 1.2**")
+    
     st.markdown("---")
-    st.markdown("### 💡 帮助")
-    with st.expander("如何使用"):
-        st.markdown("""
-        1. 📄 上传税率文件 (duty_rate.xlsx)
-        2. 📋 上传核对清单 (processing_checklist.xlsx)
-        3. 🧾 上传发票文件 (processing_invoices*.xlsx)
-        4. ⚙️ 调整价格比对误差范围（可选）
-        5. 🚀 点击"开始处理"按钮
-        6. 📊 查看处理结果
-        """)
+    
+    # 显示当前状态
+    st.markdown("### 当前状态")
+    
+    # 检查文件上传状态（使用session state）
+    duty_uploaded = 'duty_rate_uploaded' in st.session_state and st.session_state.duty_rate_uploaded
+    checklist_uploaded = 'checklist_uploaded' in st.session_state and st.session_state.checklist_uploaded
+    invoices_uploaded = 'invoices_uploaded' in st.session_state and st.session_state.invoices_uploaded
+    
+    # 文件上传状态显示
+    if duty_uploaded:
+        st.success("✅ 税率文件已上传")
+    else:
+        st.info("⏳ 等待税率文件")
+        
+    if checklist_uploaded:
+        st.success("✅ 核对清单已上传")
+    else:
+        st.info("⏳ 等待核对清单")
+        
+    if invoices_uploaded:
+        st.success("✅ 发票文件已上传")
+    else:
+        st.info("⏳ 等待发票文件")
+    
+    # 显示整体进度
+    total_files = 3
+    uploaded_files = sum([duty_uploaded, checklist_uploaded, invoices_uploaded])
+    progress = uploaded_files / total_files
+    
+    st.markdown("### 📈 上传进度")
+    st.progress(progress)
+    st.caption(f"已上传 {uploaded_files}/{total_files} 个文件")
+    
+    st.markdown("---")
+    
+    # 快速导航
+    st.markdown("### 🧭 快速导航")
+    st.markdown("""
+    - 📁 **文件上传与设置** - 上传文件并配置参数
+    - 👀 **数据预览** - 查看上传的数据
+    - 📊 **处理结果** - 查看处理后的数据
+    - 📋 **差异报告** - 查看比对差异
+    - 📝 **日志** - 查看处理日志
+    """)
+    
+    st.markdown("---")
+    st.markdown("### ℹ️ 系统信息")
+    st.caption("© 2025 Checklist核对系统")
+    st.caption("专业的发票核对解决方案")
 
 # Main content area with tabs
 tab1, tab2, tab3, tab4, tab5 = st.tabs(["文件上传", "数据预览", "处理结果", "差异报告", "日志"])
@@ -461,6 +516,29 @@ def process_checklist(file_path):
         logging.info(f"Checklist file loaded. Shape: {df.shape}")
         logging.info(f"Checklist columns: {df.columns.tolist()}")
 
+        # 检查必要的列是否存在，如果不存在则尝试找到相似的列名
+        required_columns = ['P/N', 'Item#', 'Desc', 'Qty', 'Price', 'HSN', 'BCD', 'SWS', 'IGST']
+        column_mapping = {}
+        
+        for req_col in required_columns:
+            if req_col in df.columns:
+                column_mapping[req_col] = req_col
+            else:
+                # 尝试找到相似的列名（不区分大小写，忽略空格和特殊字符）
+                for col in df.columns:
+                    col_clean = str(col).strip().replace(' ', '').replace('/', '').replace('-', '').upper()
+                    req_col_clean = req_col.replace('/', '').replace('-', '').upper()
+                    if col_clean == req_col_clean or req_col_clean in col_clean:
+                        column_mapping[req_col] = col
+                        logging.info(f"Mapped column '{req_col}' to '{col}'")
+                        break
+                
+                if req_col not in column_mapping:
+                    logging.warning(f"Column '{req_col}' not found in checklist file")
+                    column_mapping[req_col] = None
+
+        logging.info(f"Column mapping: {column_mapping}")
+
         # 初始化新的DataFrame用于存储结果
         result_rows = []
         current_invoice = None
@@ -469,8 +547,18 @@ def process_checklist(file_path):
 
         # 遍历每一行
         for _, row in df.iterrows():  # 使用 _ 表示不使用的索引变量
-            # 检查是否是发票行
-            pn = str(row['P/N'])
+            # 检查是否是发票行 - 使用安全的列访问
+            pn_col = column_mapping.get('P/N')
+            if pn_col and pn_col in df.columns:
+                pn = str(row[pn_col]) if pd.notna(row[pn_col]) else ''
+            else:
+                # 如果没有P/N列，尝试在第一列或其他列中查找Invoice信息
+                pn = ''
+                for col in df.columns:
+                    if pd.notna(row[col]) and 'Invoice:' in str(row[col]):
+                        pn = str(row[col])
+                        break
+            
             if 'Invoice:' in str(pn):
                 # 提取发票号
                 invoice_no = pn.split('Invoice:')[1].split('dt.')[0].strip()
@@ -492,39 +580,65 @@ def process_checklist(file_path):
                     'IGST': None
                 })
             else:
-                # 处理常规行
-                if pd.notna(row['Item#']) and current_invoice:
+                # 处理常规行 - 使用安全的列访问
+                item_col = column_mapping.get('Item#')
+                if item_col and item_col in df.columns and pd.notna(row[item_col]) and current_invoice:
                     # Convert Item# to integer before concatenating to remove the decimal
-                    item_id = f"{current_invoice}_{int(row['Item#'])}"
-                    item_name = str(row['Desc']).split('-')[0] if pd.notna(row['Desc']) else ''
-                    item_count += 1
-
-                    # 修改item_name的处理逻辑
-                    desc = ''
-                    if pd.notna(row['Desc']):
-                        # 分割字符串，取"-PART NO"之前的部分
-                        desc_parts = str(row['Desc']).split('-PART NO')
+                    try:
+                        item_num = int(float(row[item_col])) if pd.notna(row[item_col]) else 0
+                        item_id = f"{current_invoice}_{item_num}"
+                    except (ValueError, TypeError):
+                        item_id = f"{current_invoice}_{str(row[item_col])}"
+                    
+                    # 安全获取Desc列
+                    desc_col = column_mapping.get('Desc')
+                    if desc_col and desc_col in df.columns and pd.notna(row[desc_col]):
+                        item_name = str(row[desc_col]).split('-')[0]
+                        # 修改item_name的处理逻辑
+                        desc_parts = str(row[desc_col]).split('-PART NO')
                         desc = desc_parts[0]
                         # 只保留字母数字和点号，并转换为大写
                         desc = desc.replace('+OR-', '')
                         desc = desc.replace('DEG', '')
                         desc = desc.replace('-', '')
                         desc = ''.join(char for char in desc if char.isalnum() or char in '.()').upper()
+                    else:
+                        item_name = ''
+                        desc = ''
+                    
+                    item_count += 1
 
-                    # 创建一个安全的字典，检查列是否存在
+                    # 创建一个安全的字典，使用映射的列名
+                    def safe_get_value(col_name):
+                        mapped_col = column_mapping.get(col_name)
+                        if mapped_col and mapped_col in df.columns:
+                            return row[mapped_col] if pd.notna(row[mapped_col]) else ''
+                        return ''
+
                     item_dict = {
-                        'Item#': row['Item#'],
+                        'Item#': safe_get_value('Item#'),
                         'ID': item_id,
-                        'P/N': row.get('P/N', ''),
+                        'P/N': safe_get_value('P/N'),
                         'Desc': desc,
-                        'Qty': row.get('Qty', ''),
-                        'Price': row.get('Price', ''),
+                        'Qty': safe_get_value('Qty'),
+                        'Price': safe_get_value('Price'),
                         'Item_Name': item_name,
-                        'HSN': int(row.get('HSN', 0)) if str(row.get('HSN', '')).strip().isdigit() else row.get('HSN', ''),
-                        'BCD': row.get('BCD', ''),
-                        'SWS': row.get('SWS', ''),
-                        'IGST': row.get('IGST', ''),
+                        'HSN': '',
+                        'BCD': '',
+                        'SWS': '',
+                        'IGST': '',
                     }
+                    
+                    # 处理HSN列（可能是数字）
+                    hsn_value = safe_get_value('HSN')
+                    if hsn_value and str(hsn_value).strip().isdigit():
+                        item_dict['HSN'] = int(float(hsn_value))
+                    else:
+                        item_dict['HSN'] = hsn_value
+                    
+                    # 处理其他数值列
+                    for col in ['BCD', 'SWS', 'IGST']:
+                        item_dict[col] = safe_get_value(col)
 
                     # 确保所有值都是字符串类型
                     for key in ['Item#', 'P/N', 'ID', 'Qty', 'Price', 'HSN', 'BCD', 'SWS', 'IGST']:
@@ -537,6 +651,23 @@ def process_checklist(file_path):
         result_df = pd.DataFrame(result_rows)
         logging.info(f"Processed checklist with {invoice_count} invoices and {item_count} items")
         logging.info(f"Final checklist DataFrame shape: {result_df.shape}")
+        
+        # 如果没有处理到任何数据，记录详细信息
+        if result_df.empty:
+            logging.warning("No data was processed from checklist file")
+            logging.warning(f"Available columns in file: {df.columns.tolist()}")
+            logging.warning(f"Column mapping used: {column_mapping}")
+            logging.warning("Please check if the file format matches expected structure")
+            
+            # 显示前几行数据以帮助调试
+            if not df.empty:
+                logging.warning(f"First few rows of data:")
+                for i, row in df.head(5).iterrows():
+                    logging.warning(f"Row {i}: {row.to_dict()}")
+        else:
+            logging.info(f"Successfully processed checklist data")
+            if not result_df.empty:
+                logging.info(f"Sample processed data: {result_df.head(2).to_dict()}")
 
         # Check for duplicate IDs
         duplicate_ids = result_df['ID'].value_counts()[result_df['ID'].value_counts() > 1]
@@ -559,7 +690,17 @@ def process_checklist(file_path):
         error_msg = f"处理核对清单失败: {str(e)}"
         logging.error(error_msg)
         logging.exception("Exception details:")
-        st.error(error_msg)
+        
+        # 提供更详细的错误信息给用户
+        if "KeyError" in str(e):
+            missing_col = str(e).split("'")[1] if "'" in str(e) else "未知列"
+            detailed_msg = f"核对清单文件缺少必要的列: '{missing_col}'"
+            st.error(f"❌ {detailed_msg}")
+            st.info("💡 请检查文件格式是否正确，确保包含以下列：Item#, P/N, Desc, Qty, Price, HSN, BCD, SWS, IGST")
+        else:
+            st.error(f"❌ {error_msg}")
+            st.info("💡 请检查文件格式是否为正确的Excel文件(.xlsx)")
+        
         return pd.DataFrame()
 
 def compare_excels(df1, df2, price_tolerance_pct=1.1):
@@ -932,9 +1073,12 @@ def open_email_client(email_content, subject="Checklist Revision Required"):
 
 # File Upload Tab
 with tab1:
-    st.markdown("<h2 class='sub-header'>文件上传</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 class='sub-header'>文件上传与设置</h2>", unsafe_allow_html=True)
 
-    # 创建更紧凑的三列布局
+    # 创建两行布局：第一行是文件上传，第二行是设置和处理
+    
+    # 第一行：文件上传区域
+    st.markdown("### 📁 文件上传")
     col1, col2, col3 = st.columns([1, 1, 1], gap="medium")
 
     with col1:
@@ -943,13 +1087,17 @@ with tab1:
             <h3>税率文件</h3>
         </div>
         """, unsafe_allow_html=True)
+        duty_rate_file = st.file_uploader("上传税率文件", type=["xlsx"], key="duty_rate")
         if duty_rate_file is not None:
             st.success(f"✅ 已上传: {duty_rate_file.name}")
             # Save the uploaded file
             with open(os.path.join("input", "duty_rate.xlsx"), "wb") as f:
                 f.write(duty_rate_file.getbuffer())
+            # 更新session state
+            st.session_state.duty_rate_uploaded = True
         else:
             st.info("📁 请上传税率文件")
+            st.session_state.duty_rate_uploaded = False
 
     with col2:
         st.markdown("""
@@ -957,13 +1105,17 @@ with tab1:
             <h3>核对清单</h3>
         </div>
         """, unsafe_allow_html=True)
+        checklist_file = st.file_uploader("上传核对清单", type=["xlsx"], key="checklist")
         if checklist_file is not None:
             st.success(f"✅ 已上传: {checklist_file.name}")
             # Save the uploaded file
             with open(os.path.join("input", "processing_checklist.xlsx"), "wb") as f:
                 f.write(checklist_file.getbuffer())
+            # 更新session state
+            st.session_state.checklist_uploaded = True
         else:
             st.info("📁 请上传核对清单")
+            st.session_state.checklist_uploaded = False
 
     with col3:
         st.markdown("""
@@ -971,16 +1123,70 @@ with tab1:
             <h3>发票文件</h3>
         </div>
         """, unsafe_allow_html=True)
+        invoices_file = st.file_uploader("上传发票文件", type=["xlsx"], key="invoices")
         if invoices_file is not None:
             st.success(f"✅ 已上传: {invoices_file.name}")
             # Save the uploaded file
             with open(os.path.join("input", "processing_invoices.xlsx"), "wb") as f:
                 f.write(invoices_file.getbuffer())
+            # 更新session state
+            st.session_state.invoices_uploaded = True
         else:
             st.info("📁 请上传发票文件")
+            st.session_state.invoices_uploaded = False
     
-    # 添加一些间距
-    st.markdown("<br>", unsafe_allow_html=True)
+    # 添加分隔线
+    st.markdown("---")
+    
+    # 第二行：设置和处理区域
+    col_settings, col_process, col_help = st.columns([2, 1, 2], gap="large")
+    
+    with col_settings:
+        st.markdown("""
+        <div class='settings-section'>
+            <h3>⚙️ 处理设置</h3>
+        </div>
+        """, unsafe_allow_html=True)
+        price_tolerance = st.slider("价格比对误差范围 (%)", min_value=0.1, max_value=5.0, value=1.1, step=0.1)
+        st.caption(f"当前设置: 价格差异超过 {price_tolerance}% 将被标记")
+    
+    with col_process:
+        st.markdown("""
+        <div class='process-section'>
+            <h3>🚀 开始处理</h3>
+        </div>
+        """, unsafe_allow_html=True)
+        process_button = st.button("开始处理", type="primary", use_container_width=True)
+        
+        # 显示处理状态
+        if st.session_state.get('duty_rate_uploaded', False) and \
+           st.session_state.get('checklist_uploaded', False) and \
+           st.session_state.get('invoices_uploaded', False):
+            st.success("✅ 所有文件已就绪")
+        else:
+            st.warning("⚠️ 请先上传所有文件")
+    
+    with col_help:
+        st.markdown("""
+        <div class='help-section'>
+            <h3>💡 使用说明</h3>
+        </div>
+        """, unsafe_allow_html=True)
+        with st.expander("查看详细步骤", expanded=False):
+            st.markdown("""
+            **操作步骤：**
+            1. 📄 上传税率文件 (duty_rate.xlsx)
+            2. 📋 上传核对清单 (processing_checklist.xlsx)  
+            3. 🧾 上传发票文件 (processing_invoices*.xlsx)
+            4. ⚙️ 调整价格比对误差范围（可选）
+            5. 🚀 点击"开始处理"按钮
+            6. 📊 在其他标签页查看处理结果
+            
+            **注意事项：**
+            - 确保文件格式为 .xlsx
+            - 文件大小限制为 200MB
+            - 处理时间取决于数据量大小
+            """)
 
 # Data Preview Tab
 with tab2:
