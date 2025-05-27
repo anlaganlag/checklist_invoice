@@ -544,49 +544,117 @@ def process_invoice_file(file_path, duty_rates):
             if not df.empty:
                 logging.info(f"First few columns: {df.columns[:5].tolist() if len(df.columns) > 5 else df.columns.tolist()}")
 
-            # Create a new DataFrame for this sheet
-            sheet_df = pd.DataFrame()
-
-            # Add Item# column first
-            sheet_df['Item#'] = df.iloc[:, 0]  # Assuming Item# is always the first column
-
-            # IMPORTANT: Update these indices based on the printed columns
+            # 查找数据开始的行（通常在第13行左右，包含数字的行）
+            data_start_row = None
+            for row_idx in range(min(20, len(df))):  # 检查前20行
+                # 检查第一列是否为数字（Item#）
+                first_col_val = df.iloc[row_idx, 0]
+                if pd.notna(first_col_val) and str(first_col_val).strip().isdigit():
+                    data_start_row = row_idx
+                    logging.info(f"Found data starting at row {row_idx} in sheet {original_sheet_name}")
+                    break
+            
+            if data_start_row is None:
+                logging.warning(f"No data rows found in sheet {original_sheet_name}")
+                continue
+            
+            # 提取数据行
+            data_df = df.iloc[data_start_row:].copy()
+            
+            # 重置索引
+            data_df = data_df.reset_index(drop=True)
+            
+            # 根据实际的发票文件结构定义列索引
             column_indices = {
-                'Item#': 0,
-                'P/N': 2,
-                'Desc': 3,
-                'Qty': 5,
-                'Price': 6,
-                'Item_Name': 3,
+                'Item#': 0,      # Item number (1, 2, 3...)
+                'P/N': 1,        # Part number (IPC-DK2-3H1W)
+                'Code': 2,       # Code (1.1.01.28.U11422)
+                'Desc': 3,       # Description
+                'Country': 4,    # Country
+                'Qty': 5,        # Quantity
+                'Price': 6,      # Unit price
+                'Amount': 7,     # Total amount
             }
-            logging.info(f"Using column indices: {column_indices}")
+            logging.info(f"Using column indices for sheet {original_sheet_name}: {column_indices}")
 
-            # Then add other columns except Item# (since it's already added)
-            for new_name, idx in column_indices.items():
-                if new_name == 'Item#':
-                    continue # Skip Item# as it's already added
-                # For Item_Name column, split by '-' and take only the part before it
-                if new_name == 'Item_Name':
-                    sheet_df[new_name] = df.iloc[:, idx].apply(lambda x: str(x).split('-')[0].strip() if pd.notna(x) and '-' in str(x) else x)
-                elif new_name == 'Desc':
-                    # Clean the description text to only keep alphanumeric, dots, hyphens and parentheses
-                    sheet_df[new_name] = df.iloc[:, idx].apply(lambda x: ''.join(char.upper() for char in str(x) if char.isalnum() or char in '.()').replace('Φ', '').replace('Ω', '').replace('-', '').replace('φ', '') if pd.notna(x) else x)
-                else:
-                    sheet_df[new_name] = df.iloc[:, idx]
+            # 创建新的DataFrame
+            sheet_df = pd.DataFrame()
+            
+            # 只处理有数据的行
+            valid_rows = []
+            for idx, row in data_df.iterrows():
+                # 检查第一列是否为有效的Item#
+                item_num = row.iloc[0] if len(row) > 0 else None
+                if pd.notna(item_num) and str(item_num).strip().isdigit():
+                    valid_rows.append(idx)
+            
+            if not valid_rows:
+                logging.warning(f"No valid data rows found in sheet {original_sheet_name}")
+                continue
+            
+            logging.info(f"Found {len(valid_rows)} valid data rows in sheet {original_sheet_name}")
+            
+            # 处理每个有效行
+            for row_idx in valid_rows:
+                row = data_df.iloc[row_idx]
+                
+                # 安全获取列值
+                def safe_get_col(col_idx):
+                    if col_idx < len(row):
+                        val = row.iloc[col_idx]
+                        return val if pd.notna(val) else ''
+                    return ''
+                
+                # 提取各列数据
+                item_num = safe_get_col(column_indices['Item#'])
+                part_num = safe_get_col(column_indices['P/N'])
+                code = safe_get_col(column_indices['Code'])
+                desc = safe_get_col(column_indices['Desc'])
+                country = safe_get_col(column_indices['Country'])
+                qty = safe_get_col(column_indices['Qty'])
+                price = safe_get_col(column_indices['Price'])
+                
+                # 处理描述字段，提取Item_Name
+                item_name = ''
+                if desc:
+                    # 从描述中提取Item_Name（通常是第一个'-'之前的部分）
+                    desc_str = str(desc)
+                    if '-' in desc_str:
+                        item_name = desc_str.split('-')[0].strip()
+                    else:
+                        item_name = desc_str.strip()
+                
+                # 清理描述文本
+                clean_desc = ''
+                if desc:
+                    clean_desc = ''.join(char.upper() for char in str(desc) if char.isalnum() or char in '.()').replace('Φ', '').replace('Ω', '').replace('-', '').replace('φ', '')
+                
+                # 创建ID
+                item_id = f"{processed_sheet_name}_{str(item_num).strip()}"
+                
+                # 添加到结果DataFrame
+                row_data = {
+                    'Item#': str(item_num).strip(),
+                    'ID': item_id,
+                    'P/N': str(part_num).strip(),
+                    'Desc': clean_desc,
+                    'Qty': str(qty).strip(),
+                    'Price': str(price).strip(),
+                    'Item_Name': item_name,
+                    'HSN': '',
+                    'BCD': '',
+                    'SWS': '',
+                    'IGST': ''
+                }
+                
+                sheet_df = pd.concat([sheet_df, pd.DataFrame([row_data])], ignore_index=True)
+            
+            logging.info(f"Processed {len(sheet_df)} items from sheet {original_sheet_name}")
 
-            # Create ID in the first column (trim spaces from Item# to ensure clean IDs)
-            sheet_df.loc[1:,'ID'] = processed_sheet_name + '_' + sheet_df['Item#'].astype(str).str.strip()
-            logging.info(f"Created IDs for sheet {original_sheet_name}")
-
-            # Add duty rate columns after all other columns are set
-            sheet_df['HSN'] = ''
-            sheet_df['BCD'] = ''
-            sheet_df['SWS'] = ''
-            sheet_df['IGST'] = ''
+            # 填充税率信息并收集未匹配的项目
             unique_desc = set()
-
-            # Fill duty rate information and collect unmatched items
             new_items_count = 0
+            
             for idx, row in sheet_df.iterrows():
                 itemName = row['Item_Name']
                 if pd.notna(itemName) and itemName != '':
@@ -595,10 +663,10 @@ def process_invoice_file(file_path, duty_rates):
 
                     if matched_duty_item:
                         rates = duty_rates[matched_duty_item]
-                        sheet_df.at[idx, 'HSN'] = rates['hsn']
-                        sheet_df.at[idx, 'BCD'] = rates['bcd']
-                        sheet_df.at[idx, 'SWS'] = rates['sws']
-                        sheet_df.at[idx, 'IGST'] = rates['igst']
+                        sheet_df.at[idx, 'HSN'] = str(rates['hsn'])
+                        sheet_df.at[idx, 'BCD'] = str(rates['bcd'])
+                        sheet_df.at[idx, 'SWS'] = str(rates['sws'])
+                        sheet_df.at[idx, 'IGST'] = str(rates['igst'])
 
                         # 记录匹配信息用于调试
                         if matched_duty_item != itemName:
@@ -701,16 +769,24 @@ def process_checklist(file_path):
             if req_col in df.columns:
                 column_mapping[req_col] = req_col
             else:
+                # 特殊处理IGST列，可能对应Duty列
+                if req_col == 'IGST' and 'Duty' in df.columns:
+                    column_mapping[req_col] = 'Duty'
+                    logging.info(f"Mapped column '{req_col}' to 'Duty'")
+                    continue
+                
                 # 尝试找到相似的列名（不区分大小写，忽略空格和特殊字符）
+                found = False
                 for col in df.columns:
                     col_clean = str(col).strip().replace(' ', '').replace('/', '').replace('-', '').upper()
                     req_col_clean = req_col.replace('/', '').replace('-', '').upper()
                     if col_clean == req_col_clean or req_col_clean in col_clean:
                         column_mapping[req_col] = col
                         logging.info(f"Mapped column '{req_col}' to '{col}'")
+                        found = True
                         break
 
-                if req_col not in column_mapping:
+                if not found:
                     logging.warning(f"Column '{req_col}' not found in checklist file")
                     column_mapping[req_col] = None
 
@@ -1464,13 +1540,21 @@ if process_button:
         logging.info("Starting data processing workflow")
         with st.spinner("正在处理数据..."):
             try:
-                # Log input file paths
-                duty_rate_path = os.path.join("input", "duty_rate.xlsx")
-                invoices_path = os.path.join("input", "processing_invoices.xlsx")
-                checklist_path = os.path.join("input", "processing_checklist.xlsx")
+                # 使用session state中保存的实际文件路径
+                duty_rate_path = st.session_state.get('duty_rate_path', os.path.join("input", "duty_rate.xlsx"))
+                invoices_path = st.session_state.get('invoices_path', os.path.join("input", "processing_invoices.xlsx"))
+                checklist_path = st.session_state.get('checklist_path', os.path.join("input", "processing_checklist.xlsx"))
 
                 logging.info(f"Input files: duty_rate={duty_rate_path}, invoices={invoices_path}, checklist={checklist_path}")
                 logging.info(f"Price tolerance: {price_tolerance}%")
+                
+                # 验证文件是否存在
+                if not os.path.exists(duty_rate_path):
+                    raise FileNotFoundError(f"税率文件不存在: {duty_rate_path}")
+                if not os.path.exists(invoices_path):
+                    raise FileNotFoundError(f"发票文件不存在: {invoices_path}")
+                if not os.path.exists(checklist_path):
+                    raise FileNotFoundError(f"核对清单文件不存在: {checklist_path}")
 
                 # Process duty rates
                 logging.info("Step 1: Processing duty rates")
