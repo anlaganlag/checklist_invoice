@@ -1350,6 +1350,38 @@ def open_email_client(email_content, subject="Checklist Revision Required"):
         logging.exception("Exception details:")
         return False
 
+def safe_display_dataframe(df, container_width=True):
+    """
+    安全显示 DataFrame，避免 PyArrow 序列化错误
+    """
+    try:
+        # 创建副本并转换所有列为字符串类型
+        display_df = df.copy()
+        for col in display_df.columns:
+            display_df[col] = display_df[col].astype(str)
+        
+        # 处理 NaN 值
+        display_df = display_df.fillna('')
+        
+        # 显示 DataFrame
+        st.dataframe(display_df, use_container_width=container_width)
+        return True
+        
+    except Exception as display_error:
+        # 如果还是有问题，显示基本信息
+        st.warning(f"数据显示遇到问题，显示基本信息: {str(display_error)}")
+        st.write(f"数据形状: {df.shape}")
+        st.write(f"列名: {df.columns.tolist()}")
+        
+        # 尝试显示前几行的文本版本
+        if not df.empty:
+            st.write("前5行数据:")
+            try:
+                st.text(df.head().to_string())
+            except Exception as text_error:
+                st.error(f"无法显示数据: {str(text_error)}")
+        return False
+
 # File Upload Tab
 with tab1:
     st.markdown("<h2 class='sub-header'>文件上传与设置</h2>", unsafe_allow_html=True)
@@ -1489,7 +1521,7 @@ with tab2:
         if duty_rate_file is not None:
             try:
                 duty_df = pd.read_excel(duty_rate_file)
-                st.dataframe(duty_df, use_container_width=True)
+                safe_display_dataframe(duty_df)
             except Exception as e:
                 st.error(f"无法预览税率文件: {str(e)}")
         else:
@@ -1499,7 +1531,7 @@ with tab2:
         if checklist_file is not None:
             try:
                 checklist_df = pd.read_excel(checklist_file, skiprows=3)
-                st.dataframe(checklist_df, use_container_width=True)
+                safe_display_dataframe(checklist_df)
             except Exception as e:
                 st.error(f"无法预览核对清单: {str(e)}")
         else:
@@ -1514,7 +1546,7 @@ with tab2:
                 if sheet_names:
                     selected_sheet = st.selectbox("选择发票工作表", sheet_names)
                     invoices_df = pd.read_excel(invoices_file, sheet_name=selected_sheet)
-                    st.dataframe(invoices_df, use_container_width=True)
+                    safe_display_dataframe(invoices_df)
                 else:
                     st.warning("发票文件中没有找到工作表")
             except Exception as e:
@@ -1728,18 +1760,7 @@ with tab3:
         if os.path.exists(processed_invoices_path):
             try:
                 processed_invoices_df = pd.read_excel(processed_invoices_path)
-
-                # 添加类型转换，解决Arrow序列化问题
-                for col in processed_invoices_df.columns:
-                    processed_invoices_df[col] = processed_invoices_df[col].astype(str)
-
-                # 额外处理：确保没有字符串形式的'nan'或'none'
-                for col in processed_invoices_df.columns:
-                    processed_invoices_df[col] = processed_invoices_df[col].apply(
-                        lambda x: '' if str(x).lower() in ['nan', 'none'] else str(x)
-                    )
-
-                st.dataframe(processed_invoices_df, use_container_width=True)
+                safe_display_dataframe(processed_invoices_df)
 
                 # Download button
                 with open(processed_invoices_path, "rb") as file:
@@ -1759,18 +1780,7 @@ with tab3:
         if os.path.exists(processed_checklist_path):
             try:
                 processed_checklist_df = pd.read_excel(processed_checklist_path)
-
-                # 添加类型转换，解决Arrow序列化问题
-                for col in processed_checklist_df.columns:
-                    processed_checklist_df[col] = processed_checklist_df[col].astype(str)
-
-                # 额外处理：确保没有字符串形式的'nan'或'none'
-                for col in processed_checklist_df.columns:
-                    processed_checklist_df[col] = processed_checklist_df[col].apply(
-                        lambda x: '' if str(x).lower() in ['nan', 'none'] else str(x)
-                    )
-
-                st.dataframe(processed_checklist_df, use_container_width=True)
+                safe_display_dataframe(processed_checklist_df)
 
                 # Download button
                 with open(processed_checklist_path, "rb") as file:
@@ -1795,17 +1805,7 @@ with tab3:
                 if 'newDutyRate' in sheet_names:
                     new_items_df = pd.read_excel(new_items_path, sheet_name='newDutyRate')
                     if not new_items_df.empty:
-                        # 添加类型转换，解决Arrow序列化问题
-                        for col in new_items_df.columns:
-                            new_items_df[col] = new_items_df[col].astype(str)
-
-                        # 额外处理：确保没有字符串形式的'nan'或'none'
-                        for col in new_items_df.columns:
-                            new_items_df[col] = new_items_df[col].apply(
-                                lambda x: '' if str(x).lower() in ['nan', 'none'] else str(x)
-                            )
-
-                        st.dataframe(new_items_df, use_container_width=True)
+                        safe_display_dataframe(new_items_df)
 
                         # Download button
                         with open(new_items_path, "rb") as file:
@@ -1833,19 +1833,8 @@ with tab4:
         try:
             diff_report_df = pd.read_excel(diff_report_path)
 
-            # 添加类型转换，解决Arrow序列化问题
-            for col in diff_report_df.columns:
-                # 所有列都转为字符串
-                diff_report_df[col] = diff_report_df[col].astype(str)
-
-            # 额外处理：确保没有字符串形式的'nan'或'none'
-            for col in diff_report_df.columns:
-                diff_report_df[col] = diff_report_df[col].apply(
-                    lambda x: '' if isinstance(x, str) and x.lower() in ['nan', 'none'] else x
-                )
-
             if not diff_report_df.empty:
-                st.dataframe(diff_report_df, use_container_width=True)
+                safe_display_dataframe(diff_report_df)
 
                 col1, col2 = st.columns(2)
 
