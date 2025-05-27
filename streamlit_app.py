@@ -563,11 +563,23 @@ def process_invoice_file(file_path, duty_rates):
             logging.info(f"Removed duplicates. New DataFrame shape: {all_invoices_df.shape}")
 
         # 在return前添加类型转换
-        # 确保特定列为字符串类型，解决Arrow序列化问题
-        columns_to_convert = ['Item#', 'P/N', 'ID', 'Qty', 'Price', 'HSN', 'BCD', 'SWS', 'IGST', 'Item_Name']
-        for col in columns_to_convert:
-            if col in all_invoices_df.columns:
+        # 确保所有列为字符串类型，解决Arrow序列化问题
+        logging.info(f"Converting all columns to string type for invoices DataFrame. Columns: {all_invoices_df.columns.tolist()}")
+        for col in all_invoices_df.columns:
+            try:
                 all_invoices_df[col] = all_invoices_df[col].astype(str)
+            except Exception as e:
+                logging.error(f"Error converting column '{col}' to string: {str(e)}")
+                # 如果转换失败，尝试强制转换
+                all_invoices_df[col] = all_invoices_df[col].apply(lambda x: str(x) if x is not None else '')
+
+        # 额外处理：确保没有字符串形式的'nan'或'none'
+        for col in all_invoices_df.columns:
+            all_invoices_df[col] = all_invoices_df[col].apply(
+                lambda x: '' if str(x).lower() in ['nan', 'none'] else str(x)
+            )
+
+        logging.info("Completed type conversion for invoices DataFrame")
 
         # 确保new_descriptions_df中的所有列都是字符串类型，特别是Duty列
         if not new_descriptions_df.empty:
@@ -765,11 +777,15 @@ def process_checklist(file_path):
             logging.info(f"Removed duplicates. New DataFrame shape: {result_df.shape}")
 
         # 在return前添加类型转换
-        # 确保特定列为字符串类型，解决Arrow序列化问题
-        columns_to_convert = ['Item#', 'P/N', 'ID', 'Qty', 'Price', 'HSN', 'BCD', 'SWS', 'IGST']
-        for col in columns_to_convert:
-            if col in result_df.columns:
-                result_df[col] = result_df[col].astype(str)
+        # 确保所有列为字符串类型，解决Arrow序列化问题
+        for col in result_df.columns:
+            result_df[col] = result_df[col].astype(str)
+
+        # 额外处理：确保没有字符串形式的'nan'或'none'
+        for col in result_df.columns:
+            result_df[col] = result_df[col].apply(
+                lambda x: '' if str(x).lower() in ['nan', 'none'] else str(x)
+            )
 
         return result_df
     except Exception as e:
@@ -1442,9 +1458,20 @@ if process_button:
                         else:
                             st.session_state.show_email_button = False
                     else:
-                        logging.info("No differences found, skipping diff report creation")
-                        st.session_state.show_download_button = False
+                        logging.info("No differences found, creating empty diff report")
+                        # 即使没有差异，也创建一个空的报告文件
+                        empty_diff_df = pd.DataFrame({'消息': ['没有发现差异']})
+                        empty_diff_df.to_excel(processed_report_path, index=False)
+
+                        # 仍然显示下载按钮，让用户可以下载空报告
+                        st.session_state.show_download_button = True
                         st.session_state.show_email_button = False
+
+                        # 创建空的下载缓冲区
+                        report_buffer = BytesIO()
+                        empty_diff_df.to_excel(report_buffer, index=False)
+                        report_buffer.seek(0)
+                        st.session_state.auto_download_report = report_buffer
                 except Exception as e:
                     logging.error(f"Error saving output files: {str(e)}")
                     logging.exception("Exception details:")
@@ -1526,16 +1553,14 @@ with tab3:
                 processed_invoices_df = pd.read_excel(processed_invoices_path)
 
                 # 添加类型转换，解决Arrow序列化问题
-                columns_to_convert = ['Item#', 'P/N', 'ID', 'Qty', 'Price', 'HSN', 'BCD', 'SWS', 'IGST', 'Item_Name']
-                for col in columns_to_convert:
-                    if col in processed_invoices_df.columns:
-                        processed_invoices_df[col] = processed_invoices_df[col].astype(str)
+                for col in processed_invoices_df.columns:
+                    processed_invoices_df[col] = processed_invoices_df[col].astype(str)
 
-                # 特别处理可能存在的Duty和Welfare列（旧名称）
-                for old_col in ['Duty', 'Welfare']:
-                    if old_col in processed_invoices_df.columns:
-                        processed_invoices_df[old_col] = processed_invoices_df[old_col].astype(str)
-                        logging.info(f"转换了处理后发票中的旧列名 {old_col} 为字符串类型")
+                # 额外处理：确保没有字符串形式的'nan'或'none'
+                for col in processed_invoices_df.columns:
+                    processed_invoices_df[col] = processed_invoices_df[col].apply(
+                        lambda x: '' if str(x).lower() in ['nan', 'none'] else str(x)
+                    )
 
                 st.dataframe(processed_invoices_df, use_container_width=True)
 
@@ -1559,16 +1584,14 @@ with tab3:
                 processed_checklist_df = pd.read_excel(processed_checklist_path)
 
                 # 添加类型转换，解决Arrow序列化问题
-                columns_to_convert = ['Item#', 'P/N', 'ID', 'Qty', 'Price', 'HSN', 'BCD', 'SWS', 'IGST', 'Item_Name']
-                for col in columns_to_convert:
-                    if col in processed_checklist_df.columns:
-                        processed_checklist_df[col] = processed_checklist_df[col].astype(str)
+                for col in processed_checklist_df.columns:
+                    processed_checklist_df[col] = processed_checklist_df[col].astype(str)
 
-                # 特别处理可能存在的Duty和Welfare列（旧名称）
-                for old_col in ['Duty', 'Welfare']:
-                    if old_col in processed_checklist_df.columns:
-                        processed_checklist_df[old_col] = processed_checklist_df[old_col].astype(str)
-                        logging.info(f"转换了处理后核对清单中的旧列名 {old_col} 为字符串类型")
+                # 额外处理：确保没有字符串形式的'nan'或'none'
+                for col in processed_checklist_df.columns:
+                    processed_checklist_df[col] = processed_checklist_df[col].apply(
+                        lambda x: '' if str(x).lower() in ['nan', 'none'] else str(x)
+                    )
 
                 st.dataframe(processed_checklist_df, use_container_width=True)
 
@@ -1595,16 +1618,15 @@ with tab3:
                 if 'newDutyRate' in sheet_names:
                     new_items_df = pd.read_excel(new_items_path, sheet_name='newDutyRate')
                     if not new_items_df.empty:
-                        # 添加类型转换 - 包括Item Name也转为字符串
+                        # 添加类型转换，解决Arrow序列化问题
                         for col in new_items_df.columns:
-                            # 所有列都转为字符串，不再特殊处理Item Name
                             new_items_df[col] = new_items_df[col].astype(str)
 
-                        # 特别处理可能存在的Duty和Welfare列（旧名称）
-                        for old_col, new_col in [('Duty', 'BCD'), ('Welfare', 'SWS')]:
-                            if old_col in new_items_df.columns:
-                                new_items_df[old_col] = new_items_df[old_col].astype(str)
-                                logging.info(f"转换了旧列名 {old_col} 为字符串类型")
+                        # 额外处理：确保没有字符串形式的'nan'或'none'
+                        for col in new_items_df.columns:
+                            new_items_df[col] = new_items_df[col].apply(
+                                lambda x: '' if str(x).lower() in ['nan', 'none'] else str(x)
+                            )
 
                         st.dataframe(new_items_df, use_container_width=True)
 
