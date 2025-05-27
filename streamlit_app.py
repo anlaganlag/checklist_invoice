@@ -8,6 +8,8 @@ import logging
 import datetime
 import urllib.parse
 import webbrowser
+import unicodedata
+import re
 from io import BytesIO
 
 # Set up logging
@@ -250,6 +252,85 @@ document.addEventListener('DOMContentLoaded', function() {
 # Create directories if they don't exist
 os.makedirs('input', exist_ok=True)
 os.makedirs('output', exist_ok=True)
+
+def normalize_filename(filename):
+    """
+    标准化文件名，解决Mac系统中文编码问题
+    """
+    if not filename:
+        return filename
+
+    try:
+        # 1. Unicode标准化 (NFD -> NFC)
+        normalized = unicodedata.normalize('NFC', filename)
+
+        # 2. 移除或替换特殊字符
+        # 保留中文、英文、数字、点号、下划线、连字符
+        safe_chars = re.sub(r'[^\w\u4e00-\u9fff\.\-_()]', '_', normalized)
+
+        # 3. 限制文件名长度
+        name, ext = os.path.splitext(safe_chars)
+        if len(name) > 100:  # 限制主文件名长度
+            name = name[:100]
+
+        result = name + ext
+        logging.info(f"Normalized filename: '{filename}' -> '{result}'")
+        return result
+
+    except Exception as e:
+        logging.error(f"Error normalizing filename '{filename}': {str(e)}")
+        # 如果标准化失败，使用安全的英文文件名
+        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+        ext = os.path.splitext(filename)[1] if filename else '.xlsx'
+        fallback_name = f"uploaded_file_{timestamp}{ext}"
+        logging.info(f"Using fallback filename: '{fallback_name}'")
+        return fallback_name
+
+def safe_save_uploaded_file(uploaded_file, target_path):
+    """
+    安全保存上传的文件，处理文件名编码问题
+    """
+    try:
+        # 标准化文件名
+        safe_filename = normalize_filename(uploaded_file.name)
+
+        # 构建安全的目标路径
+        target_dir = os.path.dirname(target_path)
+        safe_target_path = os.path.join(target_dir, safe_filename)
+
+        # 保存文件
+        with open(safe_target_path, "wb") as f:
+            f.write(uploaded_file.getbuffer())
+
+        logging.info(f"File saved successfully: {safe_target_path}")
+        return safe_target_path, safe_filename
+
+    except Exception as e:
+        logging.error(f"Error saving uploaded file: {str(e)}")
+        raise e
+
+def create_safe_file_uploader(label, file_type=["xlsx"], key=None, accept_multiple_files=False):
+    """
+    创建一个安全的文件上传器，处理中文文件名问题
+    """
+    # 添加文件名建议
+    help_text = """
+    💡 文件名建议：
+    • 避免使用特殊字符和空格
+    • 推荐使用英文、数字、下划线
+    • 如：invoice_20250127.xlsx
+    """
+
+    # 创建文件上传器
+    uploaded_files = st.file_uploader(
+        label,
+        type=file_type,
+        key=key,
+        accept_multiple_files=accept_multiple_files,
+        help=help_text
+    )
+
+    return uploaded_files
 
 # Main header
 st.markdown("<h1 class='main-header'>Checklist核对系统</h1>", unsafe_allow_html=True)
@@ -1211,12 +1292,16 @@ with tab1:
         """, unsafe_allow_html=True)
         duty_rate_file = st.file_uploader("上传税率文件", type=["xlsx"], key="duty_rate")
         if duty_rate_file is not None:
-            st.success(f"✅ 已上传: {duty_rate_file.name}")
-            # Save the uploaded file
-            with open(os.path.join("input", "duty_rate.xlsx"), "wb") as f:
-                f.write(duty_rate_file.getbuffer())
-            # 更新session state
-            st.session_state.duty_rate_uploaded = True
+            try:
+                # 使用安全保存函数
+                safe_path, safe_name = safe_save_uploaded_file(duty_rate_file, os.path.join("input", "duty_rate.xlsx"))
+                st.success(f"✅ 已上传: {safe_name}")
+                # 更新session state
+                st.session_state.duty_rate_uploaded = True
+                st.session_state.duty_rate_path = safe_path
+            except Exception as e:
+                st.error(f"❌ 上传失败: {str(e)}")
+                st.session_state.duty_rate_uploaded = False
         else:
             st.info("📁 请上传税率文件")
             st.session_state.duty_rate_uploaded = False
@@ -1229,12 +1314,16 @@ with tab1:
         """, unsafe_allow_html=True)
         checklist_file = st.file_uploader("上传核对清单", type=["xlsx"], key="checklist")
         if checklist_file is not None:
-            st.success(f"✅ 已上传: {checklist_file.name}")
-            # Save the uploaded file
-            with open(os.path.join("input", "processing_checklist.xlsx"), "wb") as f:
-                f.write(checklist_file.getbuffer())
-            # 更新session state
-            st.session_state.checklist_uploaded = True
+            try:
+                # 使用安全保存函数
+                safe_path, safe_name = safe_save_uploaded_file(checklist_file, os.path.join("input", "processing_checklist.xlsx"))
+                st.success(f"✅ 已上传: {safe_name}")
+                # 更新session state
+                st.session_state.checklist_uploaded = True
+                st.session_state.checklist_path = safe_path
+            except Exception as e:
+                st.error(f"❌ 上传失败: {str(e)}")
+                st.session_state.checklist_uploaded = False
         else:
             st.info("📁 请上传核对清单")
             st.session_state.checklist_uploaded = False
@@ -1247,12 +1336,16 @@ with tab1:
         """, unsafe_allow_html=True)
         invoices_file = st.file_uploader("上传发票文件", type=["xlsx"], key="invoices")
         if invoices_file is not None:
-            st.success(f"✅ 已上传: {invoices_file.name}")
-            # Save the uploaded file
-            with open(os.path.join("input", "processing_invoices.xlsx"), "wb") as f:
-                f.write(invoices_file.getbuffer())
-            # 更新session state
-            st.session_state.invoices_uploaded = True
+            try:
+                # 使用安全保存函数
+                safe_path, safe_name = safe_save_uploaded_file(invoices_file, os.path.join("input", "processing_invoices.xlsx"))
+                st.success(f"✅ 已上传: {safe_name}")
+                # 更新session state
+                st.session_state.invoices_uploaded = True
+                st.session_state.invoices_path = safe_path
+            except Exception as e:
+                st.error(f"❌ 上传失败: {str(e)}")
+                st.session_state.invoices_uploaded = False
         else:
             st.info("📁 请上传发票文件")
             st.session_state.invoices_uploaded = False
