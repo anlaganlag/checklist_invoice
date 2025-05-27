@@ -72,7 +72,7 @@ st.markdown("""
         color: #FF9800;
         font-weight: bold;
     }
-    
+
     /* 文件上传区域样式优化 */
     .upload-section {
         background-color: #E3F2FD;
@@ -87,7 +87,7 @@ st.markdown("""
         text-align: center;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
-    
+
     .upload-section h3 {
         margin-top: 0;
         margin-bottom: 0.5rem;
@@ -95,7 +95,7 @@ st.markdown("""
         font-size: 1.2rem;
         font-weight: 600;
     }
-    
+
     /* 设置区域样式 */
     .settings-section {
         background-color: #F3E5F5;
@@ -105,7 +105,7 @@ st.markdown("""
         margin-bottom: 1rem;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
-    
+
     /* 处理按钮区域样式 */
     .process-section {
         background-color: #E8F5E8;
@@ -116,7 +116,7 @@ st.markdown("""
         text-align: center;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
-    
+
     /* 帮助区域样式 */
     .help-section {
         background-color: #FFF3E0;
@@ -126,51 +126,51 @@ st.markdown("""
         margin-bottom: 1rem;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
-    
+
     /* 紧凑的列布局 */
     .stColumns {
         gap: 1.5rem !important;
     }
-    
+
     /* 减少标签页间距 */
     .stTabs [data-baseweb="tab-list"] {
         gap: 0.5rem;
         margin-bottom: 1rem;
     }
-    
+
     /* 优化文件上传器样式 */
     .stFileUploader {
         margin-bottom: 0.5rem;
     }
-    
+
     /* 优化成功和信息消息样式 */
     .stSuccess, .stInfo {
         margin-top: 0.5rem;
         margin-bottom: 0.5rem;
     }
-    
+
     /* 优化进度条样式 */
     .stProgress {
         margin-bottom: 0.5rem;
     }
-    
+
     /* 防止按钮点击后页面跳转的样式 */
     .stDownloadButton > button {
         position: relative;
         z-index: 1;
     }
-    
+
     .stButton > button {
         position: relative;
         z-index: 1;
     }
-    
+
     /* 保持页面位置的样式 */
     .main .block-container {
         scroll-behavior: smooth;
         padding-top: 1rem;
     }
-    
+
     /* 改善按钮的视觉反馈 */
     .stDownloadButton > button:hover,
     .stButton > button:hover {
@@ -178,50 +178,50 @@ st.markdown("""
         box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         transition: all 0.2s ease;
     }
-    
+
     /* 防止页面重新加载时的闪烁 */
     .stApp {
         transition: none;
     }
-    
+
     /* 优化侧边栏样式 */
     .css-1d391kg {
         padding-top: 1rem;
     }
-    
+
     /* 侧边栏文件上传器样式 */
     .css-1d391kg .stFileUploader {
         margin-bottom: 1rem;
     }
-    
+
     /* 侧边栏按钮样式 */
     .css-1d391kg .stButton > button {
         width: 100%;
         margin-top: 0.5rem;
     }
-    
+
     /* 侧边栏标题样式 */
     .css-1d391kg h2, .css-1d391kg h3 {
         margin-top: 1rem;
         margin-bottom: 0.5rem;
     }
-    
+
     /* 侧边栏滑块样式 */
     .css-1d391kg .stSlider {
         margin-bottom: 0.5rem;
     }
-    
+
     /* 减少页面顶部间距 */
     .block-container {
         padding-top: 1rem;
         padding-bottom: 1rem;
     }
-    
+
     /* 减少各个组件之间的间距 */
     .element-container {
         margin-bottom: 0.5rem;
     }
-    
+
     /* 优化标签页容器 */
     .stTabs > div > div > div > div {
         padding-top: 1rem;
@@ -236,7 +236,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
             // 记录当前滚动位置
             const scrollPosition = window.pageYOffset || document.documentElement.scrollTop;
-            
+
             // 延迟恢复滚动位置
             setTimeout(function() {
                 window.scrollTo(0, scrollPosition);
@@ -259,44 +259,44 @@ with st.sidebar:
     st.image("https://img.icons8.com/color/96/000000/invoice.png", width=80)
     st.markdown("## Checklist核对系统")
     st.markdown("**版本 1.2**")
-    
+
     st.markdown("---")
-    
+
     # 显示当前状态
     st.markdown("### 当前状态")
-    
+
     # 检查文件上传状态（使用session state）
     duty_uploaded = 'duty_rate_uploaded' in st.session_state and st.session_state.duty_rate_uploaded
     checklist_uploaded = 'checklist_uploaded' in st.session_state and st.session_state.checklist_uploaded
     invoices_uploaded = 'invoices_uploaded' in st.session_state and st.session_state.invoices_uploaded
-    
+
     # 文件上传状态显示
     if duty_uploaded:
         st.success("✅ 税率文件已上传")
     else:
         st.info("⏳ 等待税率文件")
-        
+
     if checklist_uploaded:
         st.success("✅ 核对清单已上传")
     else:
         st.info("⏳ 等待核对清单")
-        
+
     if invoices_uploaded:
         st.success("✅ 发票文件已上传")
     else:
         st.info("⏳ 等待发票文件")
-    
+
     # 显示整体进度
     total_files = 3
     uploaded_files = sum([duty_uploaded, checklist_uploaded, invoices_uploaded])
     progress = uploaded_files / total_files
-    
+
     st.markdown("### 📈 上传进度")
     st.progress(progress)
     st.caption(f"已上传 {uploaded_files}/{total_files} 个文件")
-    
+
     st.markdown("---")
-    
+
     # 快速导航
     st.markdown("### 🧭 快速导航")
     st.markdown("""
@@ -306,7 +306,7 @@ with st.sidebar:
     - 📋 **差异报告** - 查看比对差异
     - 📝 **日志** - 查看处理日志
     """)
-    
+
     st.markdown("---")
     st.markdown("### ℹ️ 系统信息")
     st.caption("© 2025 Checklist核对系统")
@@ -321,20 +321,20 @@ def normalize_item_name(item_name):
     """
     if pd.isna(item_name) or item_name == '':
         return ''
-    
+
     # 转换为字符串并转为大写
     normalized = str(item_name).upper()
-    
+
     # 移除常见的特殊字符和空格
     normalized = normalized.replace(' ', '').replace('-', '').replace('_', '')
     normalized = normalized.replace(',', '.').replace(';', '.')
-    
+
     # 移除常见的后缀
     suffixes_to_remove = ['PARTNO', 'PART', 'NO', 'NUM', 'NUMBER']
     for suffix in suffixes_to_remove:
         if normalized.endswith(suffix):
             normalized = normalized[:-len(suffix)]
-    
+
     return normalized.strip()
 
 def find_best_match(item_name, duty_rates_dict):
@@ -343,28 +343,28 @@ def find_best_match(item_name, duty_rates_dict):
     """
     if not item_name or pd.isna(item_name):
         return None
-    
+
     normalized_item = normalize_item_name(item_name)
-    
+
     # 首先尝试精确匹配
     if item_name in duty_rates_dict:
         return item_name
-    
+
     # 尝试标准化后的精确匹配
     for duty_item in duty_rates_dict.keys():
         if normalize_item_name(duty_item) == normalized_item:
             return duty_item
-    
+
     # 尝试部分匹配（包含关系）- 改进版本
     best_match = None
     best_score = 0
-    
+
     for duty_item in duty_rates_dict.keys():
         normalized_duty = normalize_item_name(duty_item)
-        
+
         # 计算匹配分数
         score = 0
-        
+
         # 完全包含关系
         if normalized_item in normalized_duty:
             score = len(normalized_item) / len(normalized_duty)
@@ -379,16 +379,16 @@ def find_best_match(item_name, duty_rates_dict):
                     common_length += 1
                 else:
                     break
-            
+
             # 如果有足够长的公共前缀，也认为是匹配
             if common_length >= 8:  # 至少8个字符的公共前缀
                 score = common_length / max(len(normalized_item), len(normalized_duty))
-        
+
         # 更新最佳匹配
         if score > best_score and score >= 0.7:  # 至少70%的匹配度
             best_score = score
             best_match = duty_item
-    
+
     return best_match
 
 # Functions from the original scripts
@@ -511,14 +511,14 @@ def process_invoice_file(file_path, duty_rates):
                 if pd.notna(itemName) and itemName != '':
                     # 使用改进的匹配算法
                     matched_duty_item = find_best_match(itemName, duty_rates)
-                    
+
                     if matched_duty_item:
                         rates = duty_rates[matched_duty_item]
                         sheet_df.at[idx, 'HSN'] = rates['hsn']
                         sheet_df.at[idx, 'BCD'] = rates['bcd']
                         sheet_df.at[idx, 'SWS'] = rates['sws']
                         sheet_df.at[idx, 'IGST'] = rates['igst']
-                        
+
                         # 记录匹配信息用于调试
                         if matched_duty_item != itemName:
                             logging.info(f"Fuzzy match found: '{itemName}' -> '{matched_duty_item}'")
@@ -603,7 +603,7 @@ def process_checklist(file_path):
         # 检查必要的列是否存在，如果不存在则尝试找到相似的列名
         required_columns = ['P/N', 'Item#', 'Desc', 'Qty', 'Price', 'HSN', 'BCD', 'SWS', 'IGST']
         column_mapping = {}
-        
+
         for req_col in required_columns:
             if req_col in df.columns:
                 column_mapping[req_col] = req_col
@@ -616,7 +616,7 @@ def process_checklist(file_path):
                         column_mapping[req_col] = col
                         logging.info(f"Mapped column '{req_col}' to '{col}'")
                         break
-                
+
                 if req_col not in column_mapping:
                     logging.warning(f"Column '{req_col}' not found in checklist file")
                     column_mapping[req_col] = None
@@ -642,7 +642,7 @@ def process_checklist(file_path):
                     if pd.notna(row[col]) and 'Invoice:' in str(row[col]):
                         pn = str(row[col])
                         break
-            
+
             if 'Invoice:' in str(pn):
                 # 提取发票号并去除所有空格
                 invoice_no = pn.split('Invoice:')[1].split('dt.')[0].strip().replace(' ', '')
@@ -675,7 +675,7 @@ def process_checklist(file_path):
                         # Remove spaces from item number to ensure clean IDs
                         clean_item = str(row[item_col]).strip().replace(' ', '')
                         item_id = f"{current_invoice}_{clean_item}"
-                    
+
                     # 安全获取Desc列
                     desc_col = column_mapping.get('Desc')
                     if desc_col and desc_col in df.columns and pd.notna(row[desc_col]):
@@ -691,7 +691,7 @@ def process_checklist(file_path):
                     else:
                         item_name = ''
                         desc = ''
-                    
+
                     item_count += 1
 
                     # 创建一个安全的字典，使用映射的列名
@@ -714,14 +714,14 @@ def process_checklist(file_path):
                         'SWS': '',
                         'IGST': '',
                     }
-                    
+
                     # 处理HSN列（可能是数字）
                     hsn_value = safe_get_value('HSN')
                     if hsn_value and str(hsn_value).strip().isdigit():
                         item_dict['HSN'] = int(float(hsn_value))
                     else:
                         item_dict['HSN'] = hsn_value
-                    
+
                     # 处理其他数值列
                     for col in ['BCD', 'SWS', 'IGST']:
                         item_dict[col] = safe_get_value(col)
@@ -737,14 +737,14 @@ def process_checklist(file_path):
         result_df = pd.DataFrame(result_rows)
         logging.info(f"Processed checklist with {invoice_count} invoices and {item_count} items")
         logging.info(f"Final checklist DataFrame shape: {result_df.shape}")
-        
+
         # 如果没有处理到任何数据，记录详细信息
         if result_df.empty:
             logging.warning("No data was processed from checklist file")
             logging.warning(f"Available columns in file: {df.columns.tolist()}")
             logging.warning(f"Column mapping used: {column_mapping}")
             logging.warning("Please check if the file format matches expected structure")
-            
+
             # 显示前几行数据以帮助调试
             if not df.empty:
                 logging.warning(f"First few rows of data:")
@@ -776,7 +776,7 @@ def process_checklist(file_path):
         error_msg = f"处理核对清单失败: {str(e)}"
         logging.error(error_msg)
         logging.exception("Exception details:")
-        
+
         # 提供更详细的错误信息给用户
         if "KeyError" in str(e):
             missing_col = str(e).split("'")[1] if "'" in str(e) else "未知列"
@@ -786,7 +786,7 @@ def process_checklist(file_path):
         else:
             st.error(f"❌ {error_msg}")
             st.info("💡 请检查文件格式是否为正确的Excel文件(.xlsx)")
-        
+
         return pd.DataFrame()
 
 def compare_excels(df1, df2, price_tolerance_pct=1.1):
@@ -937,52 +937,58 @@ def compare_excels(df1, df2, price_tolerance_pct=1.1):
                                 if val1 == val2:
                                     continue
 
-                                # 跳过NaN值或空值 - 更严格的检查
-                                if (val1.lower() == 'nan' or val2.lower() == 'nan' or
-                                    val1 == '' or val2 == '' or
-                                    val1.lower() == 'none' or val2.lower() == 'none' or
-                                    val1.strip() == '' or val2.strip() == ''):
+                                # 检查是否为空值/NaN值
+                                def is_empty_value(val):
+                                    return (val.lower() in ['nan', 'none', ''] or
+                                           val.strip() == '' or
+                                           val == 'nan')
+
+                                val1_is_empty = is_empty_value(val1)
+                                val2_is_empty = is_empty_value(val2)
+
+                                # 只有当两个值都为空时才跳过
+                                if val1_is_empty and val2_is_empty:
                                     continue
 
                                 # 跳过相同值的显示 (例如 nan -> nan)
                                 if val1.lower() == val2.lower():
                                     continue
 
-                                # 确保不是"nan -> 值"或"值 -> nan"的情况
-                                display_val1 = '' if val1.lower() in ['nan', 'none', ''] else val1
-                                display_val2 = '' if val2.lower() in ['nan', 'none', ''] else val2
+                                # 处理显示值：空值显示为 "null"
+                                display_val1 = 'null' if val1_is_empty else val1
+                                display_val2 = 'null' if val2_is_empty else val2
 
-                                # 只有当两个值都不是空/nan时才添加
-                                if display_val1 and display_val2:
-                                    diff_info[f'{col}'] = f'{display_val2} -> {display_val1}'
+                                # 添加差异信息（格式：checklist值 -> invoice值）
+                                diff_info[f'{col}'] = f'{display_val2} -> {display_val1}'
                             else:
                                 # 跳过相同值的显示
                                 if row1[col] == row2[col]:
                                     continue
 
-                                # 跳过NaN值或空值 - 更严格的检查
-                                if pd.isna(row1[col]) or pd.isna(row2[col]) or str(row1[col]).strip() == '' or str(row2[col]).strip() == '':
-                                    continue
+                                # 检查是否为空值/NaN值
+                                def is_empty_value_general(val):
+                                    if pd.isna(val):
+                                        return True
+                                    val_str = str(val).strip().lower()
+                                    return val_str in ['nan', 'none', ''] or val_str == ''
 
-                                # 将值转换为字符串并检查是否为'nan'或'none'
-                                val1 = str(row1[col]).lower()
-                                val2 = str(row2[col]).lower()
-                                if (val1 == 'nan' or val2 == 'nan' or
-                                    val1 == 'none' or val2 == 'none' or
-                                    val1.strip() == '' or val2.strip() == ''):
+                                val1_is_empty = is_empty_value_general(row1[col])
+                                val2_is_empty = is_empty_value_general(row2[col])
+
+                                # 只有当两个值都为空时才跳过
+                                if val1_is_empty and val2_is_empty:
                                     continue
 
                                 # 跳过相同值的显示 (例如 nan -> nan)
-                                if val1 == val2:
+                                if str(row1[col]).lower() == str(row2[col]).lower():
                                     continue
 
-                                # 确保不是"nan -> 值"或"值 -> nan"的情况
-                                display_val1 = '' if val1 in ['nan', 'none', ''] else str(row1[col])
-                                display_val2 = '' if val2 in ['nan', 'none', ''] else str(row2[col])
+                                # 处理显示值：空值显示为 "null"
+                                display_val1 = 'null' if val1_is_empty else str(row1[col])
+                                display_val2 = 'null' if val2_is_empty else str(row2[col])
 
-                                # 只有当两个值都不是空/nan时才添加
-                                if display_val1 and display_val2:
-                                    diff_info[f'{col}'] = f'{display_val2} -> {display_val1}'
+                                # 添加差异信息（格式：checklist值 -> invoice值）
+                                diff_info[f'{col}'] = f'{display_val2} -> {display_val1}'
 
                     # 只有当diff_info中有除了ID以外的其他列时才添加到diff_data
                     if len(diff_info) > 1:
@@ -1067,67 +1073,81 @@ def generate_email_draft(diff_report_df):
     根据差异报告生成邮件草稿内容
     """
     logging.info("生成邮件草稿开始")
-    
+
     if diff_report_df.empty:
         logging.info("没有差异数据，无需生成邮件草稿")
         return None
-    
+
     try:
         email_body_lines = []
         email_body_lines.append("-------------------------------------------------------")
         email_body_lines.append("Hello ,")
         email_body_lines.append("")
         email_body_lines.append("Please revise the checklist as below:")
-        
+
         # 遍历每一行差异数据
         for _, row in diff_report_df.iterrows():
             invoice_id = row.get('ID', 'Unknown')
-            
+
             # 构建邮件内容行
             corrections = []
-            
+
             # 检查各个字段的差异并构建修正信息
             if 'HSN' in row and pd.notna(row['HSN']) and str(row['HSN']).strip():
-                hsn_correct = str(row['HSN']).split(' -> ')[0] if ' -> ' in str(row['HSN']) else str(row['HSN'])
-                corrections.append(f"HSN {hsn_correct}")
-            
+                # 提取正确值（格式：checklist值 -> invoice值，我们需要invoice值）
+                hsn_correct = str(row['HSN']).split(' -> ')[1] if ' -> ' in str(row['HSN']) else str(row['HSN'])
+                if hsn_correct != 'null':  # 只有当正确值不是null时才添加
+                    corrections.append(f"HSN {hsn_correct}")
+
             if 'BCD' in row and pd.notna(row['BCD']) and str(row['BCD']).strip():
-                bcd_correct = str(row['BCD']).split(' -> ')[0] if ' -> ' in str(row['BCD']) else str(row['BCD'])
-                corrections.append(f"BCD is {bcd_correct}")
-            
+                # 提取正确值（格式：checklist值 -> invoice值，我们需要invoice值）
+                bcd_correct = str(row['BCD']).split(' -> ')[1] if ' -> ' in str(row['BCD']) else str(row['BCD'])
+                if bcd_correct != 'null':  # 只有当正确值不是null时才添加
+                    corrections.append(f"BCD is {bcd_correct}")
+
             if 'SWS' in row and pd.notna(row['SWS']) and str(row['SWS']).strip():
-                sws_correct = str(row['SWS']).split(' -> ')[0] if ' -> ' in str(row['SWS']) else str(row['SWS'])
-                corrections.append(f"SWS is {sws_correct}")
-            
+                # 提取正确值（格式：checklist值 -> invoice值，我们需要invoice值）
+                sws_correct = str(row['SWS']).split(' -> ')[1] if ' -> ' in str(row['SWS']) else str(row['SWS'])
+                if sws_correct != 'null':  # 只有当正确值不是null时才添加
+                    corrections.append(f"SWS is {sws_correct}")
+
             if 'IGST' in row and pd.notna(row['IGST']) and str(row['IGST']).strip():
-                hgst_correct = str(row['IGST']).split(' -> ')[0] if ' -> ' in str(row['IGST']) else str(row['IGST'])
-                corrections.append(f"HGST is {hgst_correct}")
-            
+                # 提取正确值（格式：checklist值 -> invoice值，我们需要invoice值）
+                hgst_correct = str(row['IGST']).split(' -> ')[1] if ' -> ' in str(row['IGST']) else str(row['IGST'])
+                if hgst_correct != 'null':  # 只有当正确值不是null时才添加
+                    corrections.append(f"HGST is {hgst_correct}")
+
             if 'Qty' in row and pd.notna(row['Qty']) and str(row['Qty']).strip():
-                qty_correct = str(row['Qty']).split(' -> ')[0] if ' -> ' in str(row['Qty']) else str(row['Qty'])
-                corrections.append(f"Qty is {qty_correct}")
-            
+                # 提取正确值（格式：checklist值 -> invoice值，我们需要invoice值）
+                qty_correct = str(row['Qty']).split(' -> ')[1] if ' -> ' in str(row['Qty']) else str(row['Qty'])
+                if qty_correct != 'null':  # 只有当正确值不是null时才添加
+                    corrections.append(f"Qty is {qty_correct}")
+
             if 'Price' in row and pd.notna(row['Price']) and str(row['Price']).strip():
-                price_correct = str(row['Price']).split(' -> ')[0] if ' -> ' in str(row['Price']) else str(row['Price'])
-                corrections.append(f"Price is {price_correct}")
-            
+                # 提取正确值（格式：checklist值 -> invoice值，我们需要invoice值）
+                price_correct = str(row['Price']).split(' -> ')[1] if ' -> ' in str(row['Price']) else str(row['Price'])
+                if price_correct != 'null':  # 只有当正确值不是null时才添加
+                    corrections.append(f"Price is {price_correct}")
+
             if 'Desc' in row and pd.notna(row['Desc']) and str(row['Desc']).strip():
-                desc_correct = str(row['Desc']).split(' -> ')[0] if ' -> ' in str(row['Desc']) else str(row['Desc'])
-                corrections.append(f"Description is {desc_correct}")
-            
+                # 提取正确值（格式：checklist值 -> invoice值，我们需要invoice值）
+                desc_correct = str(row['Desc']).split(' -> ')[1] if ' -> ' in str(row['Desc']) else str(row['Desc'])
+                if desc_correct != 'null':  # 只有当正确值不是null时才添加
+                    corrections.append(f"Description is {desc_correct}")
+
             if corrections:
                 email_line = f"Invoice {invoice_id} use {' '.join(corrections)}。"
                 email_body_lines.append(email_line)
-        
+
         email_body_lines.append("")
         email_body_lines.append("Thank you!")
         email_body_lines.append("-------------------------------------------------------")
-        
+
         email_content = "\n".join(email_body_lines)
         logging.info(f"邮件草稿生成完成，共{len(diff_report_df)}条差异记录")
-        
+
         return email_content
-        
+
     except Exception as e:
         error_msg = f"生成邮件草稿失败: {str(e)}"
         logging.error(error_msg)
@@ -1142,15 +1162,15 @@ def open_email_client(email_content, subject="Checklist Revision Required"):
         # URL编码邮件内容
         encoded_subject = urllib.parse.quote(subject)
         encoded_body = urllib.parse.quote(email_content)
-        
+
         # 构建mailto链接
         mailto_url = f"mailto:?subject={encoded_subject}&body={encoded_body}"
-        
+
         # 打开邮件客户端
         webbrowser.open(mailto_url)
         logging.info("已打开默认邮件客户端")
         return True
-        
+
     except Exception as e:
         error_msg = f"打开邮件客户端失败: {str(e)}"
         logging.error(error_msg)
@@ -1162,7 +1182,7 @@ with tab1:
     st.markdown("<h2 class='sub-header'>文件上传与设置</h2>", unsafe_allow_html=True)
 
     # 创建两行布局：第一行是文件上传，第二行是设置和处理
-    
+
     # 第一行：文件上传区域
     st.markdown("### 📁 文件上传")
     col1, col2, col3 = st.columns([1, 1, 1], gap="medium")
@@ -1220,13 +1240,13 @@ with tab1:
         else:
             st.info("📁 请上传发票文件")
             st.session_state.invoices_uploaded = False
-    
+
     # 添加分隔线
     st.markdown("---")
-    
+
     # 第二行：设置和处理区域
     col_settings, col_process, col_help = st.columns([2, 1, 2], gap="large")
-    
+
     with col_settings:
         st.markdown("""
         <div class='settings-section'>
@@ -1235,7 +1255,7 @@ with tab1:
         """, unsafe_allow_html=True)
         price_tolerance = st.slider("价格比对误差范围 (%)", min_value=0.1, max_value=5.0, value=1.1, step=0.1)
         st.caption(f"当前设置: 价格差异超过 {price_tolerance}% 将被标记")
-    
+
     with col_process:
         st.markdown("""
         <div class='process-section'>
@@ -1243,7 +1263,7 @@ with tab1:
         </div>
         """, unsafe_allow_html=True)
         process_button = st.button("开始处理", type="primary", use_container_width=True)
-        
+
         # 显示处理状态
         if st.session_state.get('duty_rate_uploaded', False) and \
            st.session_state.get('checklist_uploaded', False) and \
@@ -1251,7 +1271,7 @@ with tab1:
             st.success("✅ 所有文件已就绪")
         else:
             st.warning("⚠️ 请先上传所有文件")
-    
+
     with col_help:
         st.markdown("""
         <div class='help-section'>
@@ -1262,12 +1282,12 @@ with tab1:
             st.markdown("""
             **操作步骤：**
             1. 📄 上传税率文件 (duty_rate.xlsx)
-            2. 📋 上传核对清单 (processing_checklist.xlsx)  
+            2. 📋 上传核对清单 (processing_checklist.xlsx)
             3. 🧾 上传发票文件 (processing_invoices*.xlsx)
             4. ⚙️ 调整价格比对误差范围（可选）
             5. 🚀 点击"开始处理"按钮
             6. 📊 在其他标签页查看处理结果
-            
+
             **注意事项：**
             - 确保文件格式为 .xlsx
             - 文件大小限制为 200MB
@@ -1411,7 +1431,7 @@ if process_button:
                         # 设置会话状态变量，用于自动下载
                         st.session_state.auto_download_report = report_buffer
                         st.session_state.show_download_button = True
-                        
+
                         # 生成邮件草稿
                         logging.info("Step 6: Generating email draft")
                         email_content = generate_email_draft(diff_report)
@@ -1437,23 +1457,27 @@ if process_button:
                     new_items_path = os.path.join("output", "added_new_items.xlsx")
                     try:
                         with pd.ExcelWriter(new_items_path, engine='xlsxwriter') as writer:
-                            duty_df.to_excel(writer, index=False, sheet_name='CCTV')
+                            # 检查duty_df是否为None
+                            if duty_df is not None:
+                                duty_df.to_excel(writer, index=False, sheet_name='CCTV')
 
-                            # 获取CCTV工作表并设置列宽
-                            worksheet_cctv = writer.sheets['CCTV']
-                            for i, col in enumerate(duty_df.columns):
-                                # 计算列的宽度
-                                max_len = max(
-                                    duty_df[col].astype(str).map(len).max(),  # 最长内容
-                                    len(str(col))  # 列名长度
-                                ) + 2  # 添加一些额外空间
+                                # 获取CCTV工作表并设置列宽
+                                worksheet_cctv = writer.sheets['CCTV']
+                                for i, col in enumerate(duty_df.columns):
+                                    # 计算列的宽度
+                                    max_len = max(
+                                        duty_df[col].astype(str).map(len).max(),  # 最长内容
+                                        len(str(col))  # 列名长度
+                                    ) + 2  # 添加一些额外空间
 
-                                # 除了描述类列外的所有列都宽一倍
-                                if col != 'Item Name' and 'Desc' not in col:
-                                    max_len = max_len * 1.2
+                                    # 除了描述类列外的所有列都宽一倍
+                                    if col != 'Item Name' and 'Desc' not in col:
+                                        max_len = max_len * 1.2
 
-                                # 设置列宽
-                                worksheet_cctv.set_column(i, i, max_len)
+                                    # 设置列宽
+                                    worksheet_cctv.set_column(i, i, max_len)
+                            else:
+                                logging.warning("duty_df is None, skipping CCTV sheet creation")
 
                             # Add new descriptions to a new sheet with required columns
                             required_columns = ['发票及项号', 'Item Name', 'Final BCD', 'Final SWS', 'Final IGST', 'HSN1']
@@ -1625,7 +1649,7 @@ with tab4:
                 st.dataframe(diff_report_df, use_container_width=True)
 
                 col1, col2 = st.columns(2)
-                
+
                 with col1:
                     # 修改下载按钮，添加use_container_width=True来防止跳转
                     with open(diff_report_path, "rb") as file:
@@ -1637,27 +1661,27 @@ with tab4:
                             use_container_width=True,
                             help="下载差异比对报告文件"
                         )
-                
+
                 with col2:
                     # 改进邮件草稿按钮，使用更好的状态管理
                     # 初始化邮件生成状态
                     if 'email_button_clicked' not in st.session_state:
                         st.session_state.email_button_clicked = False
-                    
+
                     if st.button("📧 生成通知邮件草稿", type="secondary", key="generate_email_button", use_container_width=True):
                         # 设置按钮点击状态
                         st.session_state.email_button_clicked = True
-                        
+
                         email_content = generate_email_draft(diff_report_df)
                         if email_content:
                             # 显示邮件内容预览
                             st.session_state.email_draft_content = email_content
-                            
+
                             # 使用容器来显示状态消息，避免页面跳转
                             success_container = st.container()
                             with success_container:
                                 st.success("✅ 邮件草稿已生成！")
-                            
+
                             # 尝试打开邮件客户端
                             if open_email_client(email_content):
                                 info_container = st.container()
@@ -1671,7 +1695,7 @@ with tab4:
                             error_container = st.container()
                             with error_container:
                                 st.error("❌ 生成邮件草稿失败")
-                    
+
                     # 如果按钮被点击过，显示重置选项
                     if st.session_state.email_button_clicked:
                         if st.button("🔄 重置", key="reset_email_button", help="重置邮件生成状态"):
@@ -1679,7 +1703,7 @@ with tab4:
                             if 'email_draft_content' in st.session_state:
                                 del st.session_state.email_draft_content
                             st.rerun()
-                
+
                 # 显示邮件内容预览
                 if 'email_draft_content' in st.session_state:
                     st.markdown("### 邮件草稿预览")
@@ -1750,15 +1774,15 @@ st.markdown("---")
 if 'show_download_button' in st.session_state and st.session_state.show_download_button:
     if 'auto_download_report' in st.session_state:
         st.success("处理完成！比对报告已准备好下载")
-        
+
         col1, col2 = st.columns(2)
-        
+
         with col1:
             # 使用session state来管理下载状态，避免页面跳转
             # 初始化下载状态
             if 'download_clicked' not in st.session_state:
                 st.session_state.download_clicked = False
-            
+
             # 创建下载按钮
             download_button = st.download_button(
                 label="📥 点击下载比对报告",
@@ -1769,7 +1793,7 @@ if 'show_download_button' in st.session_state and st.session_state.show_download
                 use_container_width=True,
                 help="点击下载差异比对报告文件"
             )
-            
+
             # 如果下载按钮被点击，显示反馈
             if download_button:
                 st.session_state.download_clicked = True
@@ -1777,27 +1801,27 @@ if 'show_download_button' in st.session_state and st.session_state.show_download
                 with success_container:
                     st.success("✅ 报告下载已开始")
                     st.info(" 文件将保存到您的默认下载文件夹")
-        
+
         with col2:
             # 使用session state来管理邮件生成状态，避免页面跳转
             if 'show_email_button' in st.session_state and st.session_state.show_email_button:
                 # 检查是否已经生成过邮件草稿
                 if 'email_generated' not in st.session_state:
                     st.session_state.email_generated = False
-                
+
                 # 使用不同的按钮文本来反映状态
                 button_label = "🔄 重新生成邮件草稿" if st.session_state.email_generated else "📧 生成通知邮件草稿"
-                
+
                 if st.button(button_label, type="secondary", key="auto_generate_email_button", use_container_width=True, help="生成并打开邮件客户端"):
                     if 'email_draft_content' in st.session_state:
                         # 标记邮件已生成
                         st.session_state.email_generated = True
-                        
+
                         # 使用容器来显示状态消息，避免页面跳转
                         success_container = st.container()
                         with success_container:
                             st.success("✅ 邮件草稿已准备就绪")
-                        
+
                         # 尝试打开邮件客户端
                         if open_email_client(st.session_state.email_draft_content):
                             info_container = st.container()
