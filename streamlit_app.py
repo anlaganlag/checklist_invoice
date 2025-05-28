@@ -1136,6 +1136,9 @@ def compare_excels(df1, df2, price_tolerance_pct=1.1):
         match_count = 0
         diff_count = 0
 
+        # 定义期望的列顺序 (按照指定顺序)
+        expected_columns = ['ID', 'P/N', 'Desc', 'HSN', 'BCD', 'SWS', 'IGST', 'Qty', 'Price']
+
         for _, row1 in df1.iterrows():
             id1 = row1['ID']
             # Skip if this ID has already been processed or is None
@@ -1151,11 +1154,25 @@ def compare_excels(df1, df2, price_tolerance_pct=1.1):
                 match_count += 1
                 row2 = matching_row.iloc[0]
                 diff_cols = []
-                for col in df1.columns[1:]:  # 跳过ID列
+                
+                # 创建差异信息字典，包含所有期望的列
+                diff_info = {'ID': id1}
+                
+                # 为所有期望的列添加数据，只有发生变化的才显示内容
+                for col in expected_columns:
+                    if col == 'ID':
+                        continue  # ID已经添加
+                    
+                    if col not in df1.columns or col not in df2.columns:
+                        # 如果列不存在，跳过
+                        continue
+                    
                     # 跳过Item_Name列和Item#列的比对
                     if col == 'Item_Name' or col == 'Item#':
                         continue
 
+                    has_difference = False
+                    
                     # 对Price列使用用户设置的误差范围
                     if col == 'Price':
                         if pd.notna(row1[col]) and pd.notna(row2[col]):
@@ -1167,11 +1184,13 @@ def compare_excels(df1, df2, price_tolerance_pct=1.1):
                                 # 计算容差
                                 tolerance = price1 * (price_tolerance_pct / 100)  # 转换为小数
                                 if abs(price1 - price2) > tolerance:
+                                    has_difference = True
                                     diff_cols.append(col)
                             except (ValueError, TypeError):
                                 # 如果转换失败，记录错误并跳过比较
                                 logging.warning(f"无法比较价格: {row1[col]} vs {row2[col]}，跳过此比较")
                                 # 保险起见，标记为有差异
+                                has_difference = True
                                 diff_cols.append(col)
                     # 对HSN列特殊处理，忽略浮点数和整数的差异（如85423900.0和85423900）
                     elif col == 'HSN':
@@ -1183,108 +1202,86 @@ def compare_excels(df1, df2, price_tolerance_pct=1.1):
                             # 记录HSN值的比较
                             if val1 != val2:
                                 logging.info(f"HSN difference found: {row1[col]} vs {row2[col]} (normalized: {val1} vs {val2})")
+                                has_difference = True
                                 diff_cols.append(col)
                             else:
                                 logging.debug(f"HSN values considered equal: {row1[col]} vs {row2[col]} (normalized: {val1} vs {val2})")
-                    # 其他列使用精确比对
-                    elif row1[col] != row2[col]:
-                        diff_cols.append(col)
+                    # 其他列使用精确比对，但先转换为字符串避免类型不匹配
+                    else:
+                        # 将两个值都转换为字符串进行比较，避免类型不匹配问题
+                        val1_str = str(row1[col]).strip()
+                        val2_str = str(row2[col]).strip()
+                        
+                        # 对于数值列，还需要处理小数点后的零
+                        if col in ['HSN', 'BCD', 'SWS', 'IGST', 'Qty', 'Price']:
+                            val1_str = val1_str.rstrip('0').rstrip('.') if '.' in val1_str else val1_str
+                            val2_str = val2_str.rstrip('0').rstrip('.') if '.' in val2_str else val2_str
+                        
+                        if val1_str != val2_str:
+                            has_difference = True
+                            diff_cols.append(col)
+
+                    # 只有发生变化的列才添加内容，未变化的列留空
+                    if has_difference:
+                        # 对数字列特殊处理显示格式，去除小数点后的零
+                        if col in ['HSN', 'BCD', 'SWS', 'IGST', 'Qty', 'Price']:
+                            # 处理数值，去除小数点后的零
+                            val1 = str(row1[col]).rstrip('0').rstrip('.') if '.' in str(row1[col]) else str(row1[col])
+                            val2 = str(row2[col]).rstrip('0').rstrip('.') if '.' in str(row2[col]) else str(row2[col])
+
+                            # 特别为BCD字段添加调试信息
+                            if col == 'BCD':
+                                logging.info(f"Processing BCD difference for ID {id1}:")
+                                logging.info(f"  - Original values: '{row1[col]}' vs '{row2[col]}'")
+                                logging.info(f"  - Processed values: '{val1}' vs '{val2}'")
+
+                            # 检查是否为空值/NaN值
+                            def is_empty_value(val):
+                                return (val.lower() in ['nan', 'none', ''] or
+                                       val.strip() == '' or
+                                       val == 'nan')
+
+                            val1_is_empty = is_empty_value(val1)
+                            val2_is_empty = is_empty_value(val2)
+
+                            # 处理显示值：空值显示为 "null"
+                            display_val1 = 'null' if val1_is_empty else val1
+                            display_val2 = 'null' if val2_is_empty else val2
+
+                            # 添加差异信息（格式：checklist值 -> invoice值）
+                            diff_info[f'{col}'] = f'{display_val2} -> {display_val1}'
+                            
+                            # 特别为BCD字段添加确认信息
+                            if col == 'BCD':
+                                logging.info(f"BCD difference added to report: '{display_val2} -> {display_val1}'")
+                        else:
+                            # 检查是否为空值/NaN值
+                            def is_empty_value_general(val):
+                                if pd.isna(val):
+                                    return True
+                                val_str = str(val).strip().lower()
+                                return val_str in ['nan', 'none', ''] or val_str == ''
+
+                            val1_is_empty = is_empty_value_general(row1[col])
+                            val2_is_empty = is_empty_value_general(row2[col])
+
+                            # 处理显示值：空值显示为 "null"
+                            display_val1 = 'null' if val1_is_empty else str(row1[col])
+                            display_val2 = 'null' if val2_is_empty else str(row2[col])
+
+                            # 添加差异信息（格式：checklist值 -> invoice值）
+                            diff_info[f'{col}'] = f'{display_val2} -> {display_val1}'
+                    else:
+                        # 没有差异的列留空
+                        diff_info[f'{col}'] = ''
 
                 if diff_cols:
                     diff_count += 1
-                    # 只创建包含ID和有差异列的信息
-                    diff_info = {'ID': id1}
-
-                    # 记录差异列
                     logging.info(f"ID {id1} 的差异列: {diff_cols}")
-                    
-                    # 添加详细的BCD调试信息
-                    if 'BCD' in diff_cols:
-                        logging.info(f"BCD difference detected for ID {id1}:")
-                        logging.info(f"  - Invoice BCD: '{row1['BCD']}' (type: {type(row1['BCD'])})")
-                        logging.info(f"  - Checklist BCD: '{row2['BCD']}' (type: {type(row2['BCD'])})")
 
-                    # 按照期望的列顺序处理差异列
-                    expected_columns = ['ID', 'P/N', 'Desc', 'HSN', 'BCD', 'SWS', 'IGST', 'Qty', 'Price']
-
-                    # 首先处理ID列
-                    diff_info['ID'] = id1
-
-                    # 然后按照期望的顺序处理其他列
-                    for col in expected_columns:
-                        if col != 'ID' and col in diff_cols:
-                            # 对数字列特殊处理显示格式，去除小数点后的零
-                            if col in ['HSN', 'BCD', 'SWS', 'IGST', 'Qty', 'Price']:
-                                # 处理数值，去除小数点后的零
-                                val1 = str(row1[col]).rstrip('0').rstrip('.') if '.' in str(row1[col]) else str(row1[col])
-                                val2 = str(row2[col]).rstrip('0').rstrip('.') if '.' in str(row2[col]) else str(row2[col])
-
-                                # 特别为BCD字段添加调试信息
-                                if col == 'BCD':
-                                    logging.info(f"Processing BCD difference for ID {id1}:")
-                                    logging.info(f"  - Original values: '{row1[col]}' vs '{row2[col]}'")
-                                    logging.info(f"  - Processed values: '{val1}' vs '{val2}'")
-
-                                # 检查是否为空值/NaN值
-                                def is_empty_value(val):
-                                    return (val.lower() in ['nan', 'none', ''] or
-                                           val.strip() == '' or
-                                           val == 'nan')
-
-                                val1_is_empty = is_empty_value(val1)
-                                val2_is_empty = is_empty_value(val2)
-
-                                # 特别处理：如果值相同，但原始值不同，仍然记录差异
-                                # 这解决了BCD字段被意外跳过的问题
-                                if val1 == val2 and str(row1[col]) == str(row2[col]):
-                                    # 真正相同的值才跳过
-                                    if col == 'BCD':
-                                        logging.info(f"BCD values are truly equal, skipping: {val1} == {val2}")
-                                    continue
-
-                                # 处理显示值：空值显示为 "null"
-                                display_val1 = 'null' if val1_is_empty else val1
-                                display_val2 = 'null' if val2_is_empty else val2
-
-                                # 添加差异信息（格式：checklist值 -> invoice值）
-                                diff_info[f'{col}'] = f'{display_val2} -> {display_val1}'
-                                
-                                # 特别为BCD字段添加确认信息
-                                if col == 'BCD':
-                                    logging.info(f"BCD difference added to report: '{display_val2} -> {display_val1}'")
-                            else:
-                                # 跳过相同值的显示
-                                if row1[col] == row2[col]:
-                                    continue
-
-                                # 检查是否为空值/NaN值
-                                def is_empty_value_general(val):
-                                    if pd.isna(val):
-                                        return True
-                                    val_str = str(val).strip().lower()
-                                    return val_str in ['nan', 'none', ''] or val_str == ''
-
-                                val1_is_empty = is_empty_value_general(row1[col])
-                                val2_is_empty = is_empty_value_general(row2[col])
-
-                                # 只有当两个值都为空时才跳过
-                                if val1_is_empty and val2_is_empty:
-                                    continue
-
-                                # 跳过相同值的显示 (例如 nan -> nan)
-                                if str(row1[col]).lower() == str(row2[col]).lower():
-                                    continue
-
-                                # 处理显示值：空值显示为 "null"
-                                display_val1 = 'null' if val1_is_empty else str(row1[col])
-                                display_val2 = 'null' if val2_is_empty else str(row2[col])
-
-                                # 添加差异信息（格式：checklist值 -> invoice值）
-                                diff_info[f'{col}'] = f'{display_val2} -> {display_val1}'
-
-                    # 只有当diff_info中有除了ID以外的其他列时才添加到diff_data
-                    if len(diff_info) > 1:
-                        diff_data.append(diff_info)
+                # 只有当存在差异时才添加到差异数据中
+                if diff_cols:
+                    diff_data.append(diff_info)
 
         logging.info(f"Comparison complete. Found {match_count} matching IDs between files")
         logging.info(f"Found {diff_count} differences")
@@ -1292,58 +1289,13 @@ def compare_excels(df1, df2, price_tolerance_pct=1.1):
         if diff_data:
             diff_df = pd.DataFrame(diff_data)
 
-            # 列名已经是 BCD 和 SWS，不需要再进行映射
-
-            # 定义期望的列顺序 (按照指定顺序)
-            expected_columns = ['ID', 'P/N', 'Desc', 'HSN', 'BCD', 'SWS', 'IGST', 'Qty', 'Price']
-
-            # 只保留实际有数据的列
-            non_empty_columns = ['ID']  # ID列始终保留
-
-            # 检查每一列是否有非空/非nan数据
-            for col in diff_df.columns:
-                if col != 'ID':  # 跳过ID列，因为已经包含
-                    # 检查列是否包含任何非空值
-                    has_data = False
-                    for val in diff_df[col]:
-                        if pd.notna(val) and str(val).strip() != '' and str(val).lower() != 'nan' and str(val).lower() != 'none':
-                            has_data = True
-                            break
-
-                    # 特别为BCD列添加详细调试信息
-                    if col == 'BCD':
-                        logging.info(f"BCD column filtering check:")
-                        logging.info(f"  - Column exists in diff_df: {col in diff_df.columns}")
-                        logging.info(f"  - Has data: {has_data}")
-                        if col in diff_df.columns:
-                            logging.info(f"  - Column values: {diff_df[col].tolist()}")
-                            logging.info(f"  - Non-null values: {[v for v in diff_df[col] if pd.notna(v) and str(v).strip() != '']}")
-
-                    if has_data:
-                        non_empty_columns.append(col)
-                        logging.info(f"Column '{col}' added to non_empty_columns (has data)")
-                    else:
-                        logging.info(f"Column '{col}' skipped (no data found)")
-
-            logging.info(f"Non-empty columns: {non_empty_columns}")
-
             # 严格按照期望的列顺序排序，只包含存在的列
             ordered_columns = []
             for col in expected_columns:
-                if col in diff_df.columns and (col == 'ID' or col in non_empty_columns):
+                if col in diff_df.columns:
                     ordered_columns.append(col)
                     logging.info(f"添加列到最终报告: {col}")
-                elif col in expected_columns:
-                    # 特别为BCD列添加详细信息
-                    if col == 'BCD':
-                        logging.info(f"BCD列被跳过的原因:")
-                        logging.info(f"  - 在diff_df中存在: {col in diff_df.columns}")
-                        logging.info(f"  - 在non_empty_columns中: {col in non_empty_columns}")
-                        if col in diff_df.columns:
-                            logging.info(f"  - BCD列的所有值: {diff_df[col].tolist()}")
-                    logging.info(f"列 {col} 不存在或为空，跳过")
 
-            # 不再添加其他列，确保严格按照指定顺序
             logging.info(f"最终列顺序: {ordered_columns}")
 
             # 应用新的列顺序
@@ -1362,12 +1314,6 @@ def compare_excels(df1, df2, price_tolerance_pct=1.1):
                 diff_df[col] = diff_df[col].apply(
                     lambda x: '' if x.lower() in ['nan', 'none'] else x
                 )
-
-            # 特别处理可能存在的Duty和Welfare列（旧名称）
-            for old_col in ['Duty', 'Welfare']:
-                if old_col in diff_df.columns:
-                    diff_df[old_col] = diff_df[old_col].astype(str)
-                    logging.info(f"转换了差异报告中的旧列名 {old_col} 为字符串类型")
 
             return diff_df
         else:
