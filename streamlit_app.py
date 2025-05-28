@@ -544,15 +544,97 @@ def process_invoice_file(file_path, duty_rates):
             if not df.empty:
                 logging.info(f"First few columns: {df.columns[:5].tolist() if len(df.columns) > 5 else df.columns.tolist()}")
 
-            # 查找数据开始的行（通常在第13行左右，包含数字的行）
-            data_start_row = None
-            for row_idx in range(min(20, len(df))):  # 检查前20行
-                # 检查第一列是否为数字（Item#）
-                first_col_val = df.iloc[row_idx, 0]
-                if pd.notna(first_col_val) and str(first_col_val).strip().isdigit():
-                    data_start_row = row_idx
-                    logging.info(f"Found data starting at row {row_idx} in sheet {original_sheet_name}")
+            # 动态检测列结构
+            # 首先尝试找到表头行
+            header_row_idx = None
+            for i in range(min(15, len(df))):
+                row = df.iloc[i]
+                # 检查是否包含典型的表头关键词
+                row_str = ' '.join([str(cell).upper() for cell in row if pd.notna(cell)])
+                if any(keyword in row_str for keyword in ['QTY', 'QUANTITY', 'PRICE', 'AMOUNT', 'DESC', 'DESCRIPTION']):
+                    header_row_idx = i
+                    logging.info(f"Found potential header row at index {i}: {row_str}")
                     break
+            
+            # 根据实际的发票文件结构定义列索引
+            # 如果找到表头，尝试动态映射；否则使用默认映射
+            if header_row_idx is not None:
+                header_row = df.iloc[header_row_idx]
+                column_indices = {}
+                
+                for idx, cell in enumerate(header_row):
+                    if pd.notna(cell):
+                        cell_str = str(cell).upper().strip()
+                        if any(keyword in cell_str for keyword in ['ITEM', 'NO', 'SL']) and 'Item#' not in column_indices:
+                            column_indices['Item#'] = idx
+                        elif any(keyword in cell_str for keyword in ['MODEL', 'PART']) and 'Model_No' not in column_indices:
+                            column_indices['Model_No'] = idx
+                        elif ('P/N' in cell_str or 'PN' in cell_str) and 'P/N' not in column_indices:
+                            column_indices['P/N'] = idx
+                        elif any(keyword in cell_str for keyword in ['DESC', 'DESCRIPTION']) and 'Desc' not in column_indices:
+                            column_indices['Desc'] = idx
+                        elif any(keyword in cell_str for keyword in ['COUNTRY', 'ORIGIN']) and 'Country' not in column_indices:
+                            column_indices['Country'] = idx
+                        elif any(keyword in cell_str for keyword in ['QTY', 'QUANTITY']) and 'Qty' not in column_indices:
+                            column_indices['Qty'] = idx
+                        elif any(keyword in cell_str for keyword in ['PRICE', 'RATE']) and 'Price' not in column_indices:
+                            column_indices['Price'] = idx
+                        elif any(keyword in cell_str for keyword in ['AMOUNT', 'TOTAL']) and 'Amount' not in column_indices:
+                            column_indices['Amount'] = idx
+                
+                logging.info(f"Dynamic column mapping: {column_indices}")
+                
+                # 检查是否所有必要的列都被检测到
+                required_columns = ['Item#', 'Model_No', 'P/N', 'Desc', 'Qty', 'Price']
+                missing_columns = [col for col in required_columns if col not in column_indices]
+                
+                if missing_columns:
+                    logging.warning(f"Dynamic column detection failed, missing columns: {missing_columns}")
+                    logging.warning("Using default mapping")
+                    column_indices = {
+                        'Item#': 0,      # Item number (1, 2, 3...)
+                        'Model_No': 1,   # Model number (IPC-K7CP-3H1WE)
+                        'P/N': 2,        # Part number (1.2.03.01.0002)
+                        'Desc': 3,       # Description
+                        'Country': 4,    # Country
+                        'Qty': 5,        # Quantity
+                        'Price': 6,      # Unit price
+                        'Amount': 7,     # Total amount
+                    }
+                else:
+                    # 补充可能缺失的非必要列
+                    if 'Country' not in column_indices:
+                        column_indices['Country'] = 4  # 默认值
+                    if 'Amount' not in column_indices:
+                        column_indices['Amount'] = 7   # 默认值
+            else:
+                logging.warning("No header row found, using default mapping")
+                # 使用默认的列索引映射
+                column_indices = {
+                    'Item#': 0,      # Item number (1, 2, 3...)
+                    'Model_No': 1,   # Model number (IPC-K7CP-3H1WE)
+                    'P/N': 2,        # Part number (1.2.03.01.0002)
+                    'Desc': 3,       # Description
+                    'Country': 4,    # Country
+                    'Qty': 5,        # Quantity
+                    'Price': 6,      # Unit price
+                    'Amount': 7,     # Total amount
+                }
+
+            logging.info(f"Using column indices for sheet {original_sheet_name}: {column_indices}")
+            
+            # 查找数据开始的行（在表头行之后，包含数字的行）
+            data_start_row = None
+            search_start = header_row_idx + 1 if header_row_idx is not None else 0
+            
+            for row_idx in range(search_start, min(search_start + 20, len(df))):
+                # 检查第一列是否为数字（Item#）
+                if row_idx < len(df):
+                    first_col_val = df.iloc[row_idx, 0]
+                    if pd.notna(first_col_val) and str(first_col_val).strip().isdigit():
+                        data_start_row = row_idx
+                        logging.info(f"Found data starting at row {row_idx} in sheet {original_sheet_name}")
+                        break
             
             if data_start_row is None:
                 logging.warning(f"No data rows found in sheet {original_sheet_name}")
@@ -563,19 +645,6 @@ def process_invoice_file(file_path, duty_rates):
             
             # 重置索引
             data_df = data_df.reset_index(drop=True)
-            
-            # 根据实际的发票文件结构定义列索引
-            column_indices = {
-                'Item#': 0,      # Item number (1, 2, 3...)
-                'P/N': 1,        # Part number (IPC-DK2-3H1W)
-                'Code': 2,       # Code (1.1.01.28.U11422)
-                'Desc': 3,       # Description
-                'Country': 4,    # Country
-                'Qty': 5,        # Quantity
-                'Price': 6,      # Unit price
-                'Amount': 7,     # Total amount
-            }
-            logging.info(f"Using column indices for sheet {original_sheet_name}: {column_indices}")
 
             # 创建新的DataFrame
             sheet_df = pd.DataFrame()
@@ -594,6 +663,25 @@ def process_invoice_file(file_path, duty_rates):
             
             logging.info(f"Found {len(valid_rows)} valid data rows in sheet {original_sheet_name}")
             
+            # 最终安全检查：确保所有必要的列索引都存在
+            required_keys = ['Item#', 'Model_No', 'P/N', 'Desc', 'Country', 'Qty', 'Price']
+            for key in required_keys:
+                if key not in column_indices:
+                    logging.error(f"Missing required column index: {key}")
+                    logging.error(f"Available column indices: {column_indices}")
+                    logging.error("Falling back to default mapping")
+                    column_indices = {
+                        'Item#': 0,      # Item number (1, 2, 3...)
+                        'Model_No': 1,   # Model number (IPC-K7CP-3H1WE)
+                        'P/N': 2,        # Part number (1.2.03.01.0002)
+                        'Desc': 3,       # Description
+                        'Country': 4,    # Country
+                        'Qty': 5,        # Quantity
+                        'Price': 6,      # Unit price
+                        'Amount': 7,     # Total amount
+                    }
+                    break
+            
             # 处理每个有效行
             for row_idx in valid_rows:
                 row = data_df.iloc[row_idx]
@@ -608,11 +696,30 @@ def process_invoice_file(file_path, duty_rates):
                 # 提取各列数据
                 item_num = safe_get_col(column_indices['Item#'])
                 part_num = safe_get_col(column_indices['P/N'])
-                code = safe_get_col(column_indices['Code'])
+                model_no = safe_get_col(column_indices['Model_No'])
                 desc = safe_get_col(column_indices['Desc'])
                 country = safe_get_col(column_indices['Country'])
                 qty = safe_get_col(column_indices['Qty'])
                 price = safe_get_col(column_indices['Price'])
+                
+                # 添加详细的调试信息，特别关注Qty字段
+                if row_idx < 3:  # 只记录前3行的调试信息
+                    logging.info(f"Row {row_idx} debugging:")
+                    logging.info(f"  - Row length: {len(row)}")
+                    logging.info(f"  - Qty column index: {column_indices.get('Qty', 'NOT_FOUND')}")
+                    if 'Qty' in column_indices and column_indices['Qty'] < len(row):
+                        raw_qty = row.iloc[column_indices['Qty']]
+                        logging.info(f"  - Raw Qty value: '{raw_qty}' (type: {type(raw_qty)})")
+                        logging.info(f"  - Processed Qty: '{qty}'")
+                    else:
+                        logging.info(f"  - Qty column index out of range or not found")
+                    
+                    if 'Price' in column_indices and column_indices['Price'] < len(row):
+                        raw_price = row.iloc[column_indices['Price']]
+                        logging.info(f"  - Raw Price value: '{raw_price}' (type: {type(raw_price)})")
+                        logging.info(f"  - Processed Price: '{price}'")
+                    else:
+                        logging.info(f"  - Price column index out of range or not found")
                 
                 # 处理描述字段，提取Item_Name
                 item_name = ''
@@ -1090,6 +1197,12 @@ def compare_excels(df1, df2, price_tolerance_pct=1.1):
 
                     # 记录差异列
                     logging.info(f"ID {id1} 的差异列: {diff_cols}")
+                    
+                    # 添加详细的BCD调试信息
+                    if 'BCD' in diff_cols:
+                        logging.info(f"BCD difference detected for ID {id1}:")
+                        logging.info(f"  - Invoice BCD: '{row1['BCD']}' (type: {type(row1['BCD'])})")
+                        logging.info(f"  - Checklist BCD: '{row2['BCD']}' (type: {type(row2['BCD'])})")
 
                     # 按照期望的列顺序处理差异列
                     expected_columns = ['ID', 'P/N', 'Desc', 'HSN', 'BCD', 'SWS', 'IGST', 'Qty', 'Price']
@@ -1106,9 +1219,11 @@ def compare_excels(df1, df2, price_tolerance_pct=1.1):
                                 val1 = str(row1[col]).rstrip('0').rstrip('.') if '.' in str(row1[col]) else str(row1[col])
                                 val2 = str(row2[col]).rstrip('0').rstrip('.') if '.' in str(row2[col]) else str(row2[col])
 
-                                # 跳过相同值的显示 (例如 10 -> 10)
-                                if val1 == val2:
-                                    continue
+                                # 特别为BCD字段添加调试信息
+                                if col == 'BCD':
+                                    logging.info(f"Processing BCD difference for ID {id1}:")
+                                    logging.info(f"  - Original values: '{row1[col]}' vs '{row2[col]}'")
+                                    logging.info(f"  - Processed values: '{val1}' vs '{val2}'")
 
                                 # 检查是否为空值/NaN值
                                 def is_empty_value(val):
@@ -1119,12 +1234,12 @@ def compare_excels(df1, df2, price_tolerance_pct=1.1):
                                 val1_is_empty = is_empty_value(val1)
                                 val2_is_empty = is_empty_value(val2)
 
-                                # 只有当两个值都为空时才跳过
-                                if val1_is_empty and val2_is_empty:
-                                    continue
-
-                                # 跳过相同值的显示 (例如 nan -> nan)
-                                if val1.lower() == val2.lower():
+                                # 特别处理：如果值相同，但原始值不同，仍然记录差异
+                                # 这解决了BCD字段被意外跳过的问题
+                                if val1 == val2 and str(row1[col]) == str(row2[col]):
+                                    # 真正相同的值才跳过
+                                    if col == 'BCD':
+                                        logging.info(f"BCD values are truly equal, skipping: {val1} == {val2}")
                                     continue
 
                                 # 处理显示值：空值显示为 "null"
@@ -1133,6 +1248,10 @@ def compare_excels(df1, df2, price_tolerance_pct=1.1):
 
                                 # 添加差异信息（格式：checklist值 -> invoice值）
                                 diff_info[f'{col}'] = f'{display_val2} -> {display_val1}'
+                                
+                                # 特别为BCD字段添加确认信息
+                                if col == 'BCD':
+                                    logging.info(f"BCD difference added to report: '{display_val2} -> {display_val1}'")
                             else:
                                 # 跳过相同值的显示
                                 if row1[col] == row2[col]:
@@ -1191,8 +1310,22 @@ def compare_excels(df1, df2, price_tolerance_pct=1.1):
                             has_data = True
                             break
 
+                    # 特别为BCD列添加详细调试信息
+                    if col == 'BCD':
+                        logging.info(f"BCD column filtering check:")
+                        logging.info(f"  - Column exists in diff_df: {col in diff_df.columns}")
+                        logging.info(f"  - Has data: {has_data}")
+                        if col in diff_df.columns:
+                            logging.info(f"  - Column values: {diff_df[col].tolist()}")
+                            logging.info(f"  - Non-null values: {[v for v in diff_df[col] if pd.notna(v) and str(v).strip() != '']}")
+
                     if has_data:
                         non_empty_columns.append(col)
+                        logging.info(f"Column '{col}' added to non_empty_columns (has data)")
+                    else:
+                        logging.info(f"Column '{col}' skipped (no data found)")
+
+            logging.info(f"Non-empty columns: {non_empty_columns}")
 
             # 严格按照期望的列顺序排序，只包含存在的列
             ordered_columns = []
@@ -1201,6 +1334,13 @@ def compare_excels(df1, df2, price_tolerance_pct=1.1):
                     ordered_columns.append(col)
                     logging.info(f"添加列到最终报告: {col}")
                 elif col in expected_columns:
+                    # 特别为BCD列添加详细信息
+                    if col == 'BCD':
+                        logging.info(f"BCD列被跳过的原因:")
+                        logging.info(f"  - 在diff_df中存在: {col in diff_df.columns}")
+                        logging.info(f"  - 在non_empty_columns中: {col in non_empty_columns}")
+                        if col in diff_df.columns:
+                            logging.info(f"  - BCD列的所有值: {diff_df[col].tolist()}")
                     logging.info(f"列 {col} 不存在或为空，跳过")
 
             # 不再添加其他列，确保严格按照指定顺序
