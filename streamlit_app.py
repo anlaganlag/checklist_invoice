@@ -508,31 +508,81 @@ def get_duty_rates(file_path):
         logging.info(f"Duty rate file loaded. Shape: {df.shape}")
         logging.info(f"Duty rate columns: {df.columns.tolist()}")
 
+        # 清理 Item Name 列中的额外空格和不可见字符
+        if 'Item Name' in df.columns:
+            original_count = len(df)
+            logging.info(f"Cleaning Item Name column for {original_count} rows")
+            
+            # 清理前记录一些样本
+            sample_items = df['Item Name'].head(5).tolist()
+            logging.info(f"Sample Item Names before cleaning: {[repr(item) for item in sample_items]}")
+            
+            # 清理 Item Name：移除前后空格、制表符、不间断空格等
+            df['Item Name'] = df['Item Name'].apply(lambda x: 
+                str(x).strip()                           # 移除前后空格
+                .replace('\xa0', ' ')                    # 替换不间断空格为普通空格
+                .replace('\t', ' ')                      # 替换制表符为空格
+                .replace('\n', ' ')                      # 替换换行符为空格
+                .replace('\r', ' ')                      # 替换回车符为空格
+                if pd.notna(x) else ''
+            )
+            
+            # 进一步标准化：移除多余的空格
+            df['Item Name'] = df['Item Name'].apply(lambda x: ' '.join(x.split()) if x else '')
+            
+            # 清理后记录样本
+            sample_items_cleaned = df['Item Name'].head(5).tolist()
+            logging.info(f"Sample Item Names after cleaning: {[repr(item) for item in sample_items_cleaned]}")
+            
+            # 移除空的 Item Name 行
+            df = df[df['Item Name'].str.strip() != '']
+            after_cleaning_count = len(df)
+            logging.info(f"Removed {original_count - after_cleaning_count} rows with empty Item Names")
+
         # Group by Item_Name and aggregate other columns
         logging.info("Grouping duty rates by 'Item Name'")
-        grouped_df = df.groupby('Item Name').agg({
+        
+        # 动态构建聚合字典，只包含存在的列
+        agg_dict = {
             'HSN1': lambda x: ' '.join(str(i) for i in x if pd.notna(i)),  # Concatenate HSN1 with space
-            'HSN2': lambda x: ' '.join(str(i) for i in x if pd.notna(i)),  # Add HSN2
             'Final BCD': 'min',
             'Final SWS': 'min',
             'Final IGST': 'min'
-        }).reset_index()
+        }
+        
+        # 只有在HSN2列存在时才添加它
+        if 'HSN2' in df.columns:
+            agg_dict['HSN2'] = lambda x: ' '.join(str(i) for i in x if pd.notna(i))
+        
+        grouped_df = df.groupby('Item Name').agg(agg_dict).reset_index()
 
         logging.info(f"Grouped duty rates. Shape: {grouped_df.shape}")
 
         # Convert DataFrame to dictionary
         duty_dict = {}
         for _, row in grouped_df.iterrows():
-            # Use HSN2 if HSN1 is empty
-            hsn_value = row['HSN1'] if pd.notna(row['HSN1']) and row['HSN1'].strip() != '' else row['HSN2']
-            duty_dict[row['Item Name']] = {
-                'hsn': hsn_value,
-                'bcd': row['Final BCD'],
-                'sws': row['Final SWS'],
-                'igst': row['Final IGST']
-            }
+            # Use HSN2 if HSN1 is empty and HSN2 exists
+            hsn_value = row['HSN1']
+            if 'HSN2' in grouped_df.columns and (pd.isna(hsn_value) or str(hsn_value).strip() == ''):
+                hsn_value = row['HSN2']
+            
+            item_name = row['Item Name']
+            
+            # 额外的安全检查：确保键是干净的
+            if item_name and item_name.strip():
+                duty_dict[item_name] = {
+                    'hsn': hsn_value,
+                    'bcd': row['Final BCD'],
+                    'sws': row['Final SWS'],
+                    'igst': row['Final IGST']
+                }
 
         logging.info(f"Created duty dictionary with {len(duty_dict)} items")
+        
+        # 记录一些键的样本用于调试
+        sample_keys = list(duty_dict.keys())[:5]
+        logging.info(f"Sample duty_dict keys: {[repr(key) for key in sample_keys]}")
+        
         return duty_dict, df
     except Exception as e:
         error_msg = f"读取税率文件失败: {str(e)}"
