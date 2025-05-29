@@ -399,35 +399,37 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs(["文件上传", "数据预览", "处理�
 def normalize_item_name(item_name):
     """
     标准化Item Name，用于更好的匹配
+    保留更多原始信息以避免过度匹配
     """
     if pd.isna(item_name) or item_name == '':
         return ''
 
     # 转换为字符串并转为大写
-    normalized = str(item_name).upper()
+    normalized = str(item_name).upper().strip()
 
-    # 移除常见的特殊字符和空格
-    normalized = normalized.replace(' ', '').replace('-', '').replace('_', '')
-    normalized = normalized.replace(',', '.').replace(';', '.')
+    # 只移除多余的空格，保留单个空格作为分隔符
+    normalized = ' '.join(normalized.split())
+    
+    # 标准化常见的分隔符为空格
+    normalized = normalized.replace('-', ' ').replace('_', ' ')
+    normalized = normalized.replace(',', ' ').replace(';', ' ')
+    
+    # 再次清理多余空格
+    normalized = ' '.join(normalized.split())
 
-    # 移除常见的后缀
-    suffixes_to_remove = ['PARTNO', 'PART', 'NO', 'NUM', 'NUMBER']
-    for suffix in suffixes_to_remove:
-        if normalized.endswith(suffix):
-            normalized = normalized[:-len(suffix)]
-
-    return normalized.strip()
+    return normalized
 
 def find_best_match(item_name, duty_rates_dict):
     """
     为给定的item_name在duty_rates字典中找到最佳匹配
+    使用更严格的匹配策略避免错误匹配
     """
     if not item_name or pd.isna(item_name):
         return None
 
     normalized_item = normalize_item_name(item_name)
 
-    # 首先尝试精确匹配
+    # 首先尝试精确匹配（原始值）
     if item_name in duty_rates_dict:
         return item_name
 
@@ -436,39 +438,64 @@ def find_best_match(item_name, duty_rates_dict):
         if normalize_item_name(duty_item) == normalized_item:
             return duty_item
 
-    # 尝试部分匹配（包含关系）- 改进版本
+    # 更严格的部分匹配策略
     best_match = None
     best_score = 0
-
+    
+    # 将标准化后的item_name分割成单词
+    item_words = normalized_item.split()
+    
     for duty_item in duty_rates_dict.keys():
         normalized_duty = normalize_item_name(duty_item)
-
-        # 计算匹配分数
+        duty_words = normalized_duty.split()
+        
+        # 计算匹配分数 - 使用更严格的策略
         score = 0
-
-        # 完全包含关系
-        if normalized_item in normalized_duty:
-            score = len(normalized_item) / len(normalized_duty)
-        elif normalized_duty in normalized_item:
-            score = len(normalized_duty) / len(normalized_item)
-        else:
-            # 计算公共子串长度
-            common_length = 0
-            min_len = min(len(normalized_item), len(normalized_duty))
-            for i in range(min_len):
-                if normalized_item[i] == normalized_duty[i]:
-                    common_length += 1
-                else:
-                    break
-
-            # 如果有足够长的公共前缀，也认为是匹配
-            if common_length >= 8:  # 至少8个字符的公共前缀
-                score = common_length / max(len(normalized_item), len(normalized_duty))
-
-        # 更新最佳匹配
-        if score > best_score and score >= 0.7:  # 至少70%的匹配度
+        
+        # 策略1: 完全相同的单词匹配
+        if len(item_words) == len(duty_words):
+            matching_words = sum(1 for w1, w2 in zip(item_words, duty_words) if w1 == w2)
+            if matching_words == len(item_words):
+                # 完全匹配，直接返回
+                return duty_item
+            elif matching_words >= len(item_words) * 0.8:  # 至少80%的单词匹配
+                score = matching_words / len(item_words)
+        
+        # 策略2: 检查是否所有关键词都存在（适用于不同长度的情况）
+        elif len(item_words) <= len(duty_words):
+            # 检查item的所有单词是否都在duty中出现
+            matching_words = sum(1 for word in item_words if word in duty_words)
+            if matching_words == len(item_words) and len(item_words) >= 2:
+                # 所有单词都匹配，且至少有2个单词
+                score = 0.9  # 给一个较高但不是最高的分数
+        
+        # 策略3: 对于单个长单词，使用更严格的子串匹配
+        elif len(item_words) == 1 and len(duty_words) == 1:
+            item_word = item_words[0]
+            duty_word = duty_words[0]
+            
+            # 只有当一个词完全包含另一个词，且长度差异不大时才匹配
+            if item_word in duty_word or duty_word in item_word:
+                shorter_len = min(len(item_word), len(duty_word))
+                longer_len = max(len(item_word), len(duty_word))
+                
+                # 长度差异不能超过30%，且较短的词至少要有6个字符
+                if shorter_len >= 6 and (longer_len - shorter_len) / longer_len <= 0.3:
+                    score = shorter_len / longer_len
+        
+        # 更新最佳匹配 - 提高阈值到0.85
+        if score > best_score and score >= 0.85:
             best_score = score
             best_match = duty_item
+            
+            # 记录匹配信息用于调试
+            logging.info(f"Potential match found: '{item_name}' -> '{duty_item}' (score: {score:.3f})")
+
+    # 如果找到匹配，记录详细信息
+    if best_match:
+        logging.info(f"Best match selected: '{item_name}' -> '{best_match}' (final score: {best_score:.3f})")
+    else:
+        logging.info(f"No suitable match found for: '{item_name}' (normalized: '{normalized_item}')")
 
     return best_match
 
